@@ -4,7 +4,7 @@
 # Purpose: Visualize dependencies (Products -> Features -> Features).
 #          Aggregates plugin counts instead of listing them individually.
 #          Supports targeting a specific Feature ID as the root.
-# Compatibility: Windows (Git Bash/WSL), Linux. Requires Bash 4.0+
+# Compatibility: Widows (Git Bash/WSL), Linux. Requires Bash 4.0+
 # Usage: ./dependency_graph.sh [directory] [optional_root_id]
 # ---------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ echo "Indexing relationships..."
 
 # 1. Scan Products (.product)
 find "$SEARCH_DIR" -type f -name "*.product" -print0 | while IFS= read -r -d '' file;
-ndo    awk -v fname="$file" \
+do    awk -v fname="$file" \
         'BEGIN { RS="<"; ORS="\n"; pid=""; p_count=0 }
         
         # FIX: Clean whitespace, including leading space caused by RS split
@@ -51,10 +51,10 @@ ndo    awk -v fname="$file" \
         }
 
         /^product[[:space:]]/ { 
-            if (match($0, /id="[^ vital"/)) {
+            if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 pid = substr(raw, 5, length(raw)-5)
-                print pid > "'$AVAILABLE_FILE'"
+                print pid > "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product: " pid > "/dev/stderr"
             }
         }
@@ -64,7 +64,7 @@ ndo    awk -v fname="$file" \
                 n=split(fname, parts, "/")
                 pid=parts[n] 
                 sub(/\.product$/, "", pid)
-                print pid > "'$AVAILABLE_FILE'"
+                print pid > "'"$AVAILABLE_FILE"'"
                 print "[INDEX] Found Product (by filename): " pid > "/dev/stderr"
             }
         }
@@ -72,7 +72,7 @@ ndo    awk -v fname="$file" \
         /^plugin[[:space:]]/ { p_count++ }
 
         /^feature[[:space:]]/ {
-            if (match($0, /id="[^ vital"/)) {
+            if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
                 if (pid != "") print pid, fid, "product_ref"
@@ -81,8 +81,8 @@ ndo    awk -v fname="$file" \
         
         END { 
             if (pid != "") {
-                print pid > "'$ROOTS_FILE'"
-                print pid, p_count > "'$COUNTS_FILE'"
+                print pid > "'"$ROOTS_FILE"'"
+                print pid, p_count > "'"$COUNTS_FILE"'"
             }
         }
     ' "$file" >> "$DB_FILE"
@@ -90,7 +90,7 @@ done
 
 # 2. Scan Features (feature.xml)
 find "$SEARCH_DIR" -type f -name "feature.xml" -print0 | while IFS= read -r -d '' file;
-ndo    awk '
+do    awk '
         BEGIN { RS="<"; ORS="\n"; fid=""; p_count=0 }
         
         # FIX: Clean whitespace, including leading space caused by RS split
@@ -100,10 +100,10 @@ ndo    awk '
         }
 
         /^feature[[:space:]]/ {
-            if (match($0, /id="[^ vital"/)) {
+            if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
-                print fid > "'$AVAILABLE_FILE'"
+                print fid > "'"$AVAILABLE_FILE"'"
                 print "[INDEX] Found Feature: " fid > "/dev/stderr"
             }
         }
@@ -111,7 +111,7 @@ ndo    awk '
         /^plugin[[:space:]]/ { p_count++ }
 
         /^includes[[:space:]]/ {
-            if (fid != "" && match($0, /id="[^ vital"/)) {
+            if (fid != "" && match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 child = substr(raw, 5, length(raw)-5)
                 print fid, child, "include"
@@ -119,7 +119,7 @@ ndo    awk '
         }
 
         /^import[[:space:]]/ {
-            if (fid != "" && match($0, /feature="[^ vital"/)) {
+            if (fid != "" && match($0, /feature="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 child = substr(raw, 10, length(raw)-10)
                 print fid, child, "require"
@@ -128,7 +128,7 @@ ndo    awk '
 
         END {
             if (fid != "") {
-                print fid, p_count > "'$COUNTS_FILE'"
+                print fid, p_count > "'"$COUNTS_FILE"'"
             }
         }
     ' "$file" >> "$DB_FILE"
