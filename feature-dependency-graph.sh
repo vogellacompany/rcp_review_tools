@@ -64,7 +64,7 @@ do    awk -v fname="$file" \
                 n=split(fname, parts, "/")
                 pid=parts[n] 
                 sub(/\.product$/, "", pid)
-                print pid > "'"$AVAILABLE_FILE"'"
+                print pid > "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product (by filename): " pid > "/dev/stderr"
             }
         }
@@ -81,8 +81,8 @@ do    awk -v fname="$file" \
         
         END { 
             if (pid != "") {
-                print pid > "'"$ROOTS_FILE"'"
-                print pid, p_count > "'"$COUNTS_FILE"'"
+                print pid > "'""$ROOTS_FILE""'"
+                print pid, p_count > "'""$COUNTS_FILE""'"
             }
         }
     ' "$file" >> "$DB_FILE"
@@ -103,12 +103,14 @@ do    awk '
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
-                print fid > "'"$AVAILABLE_FILE"'"
+                print fid > "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Feature: " fid > "/dev/stderr"
             }
         }
 
-        /^plugin[[:space:]]/ { p_count++ }
+        /^plugin[[:space:]]/ { 
+            p_count++
+        }
 
         /^includes[[:space:]]/ {
             if (fid != "" && match($0, /id="[^"]+"/)) {
@@ -119,16 +121,23 @@ do    awk '
         }
 
         /^import[[:space:]]/ {
-            if (fid != "" && match($0, /feature="[^"]+"/)) {
-                raw = substr($0, RSTART, RLENGTH)
-                child = substr(raw, 10, length(raw)-10)
-                print fid, child, "require"
+            if (fid != "") {
+                if (match($0, /feature="[^"]+"/)) {
+                    raw = substr($0, RSTART, RLENGTH)
+                    child = substr(raw, 10, length(raw)-10)
+                    print fid, child, "require"
+                }
+                if (match($0, /plugin="[^"]+"/)) {
+                    raw = substr($0, RSTART, RLENGTH)
+                    child = substr(raw, 9, length(raw)-9)
+                    print fid, child, "require"
+                }
             }
         }
 
         END {
             if (fid != "") {
-                print fid, p_count > "'"$COUNTS_FILE"'"
+                print fid, p_count > "'""$COUNTS_FILE""'"
             }
         }
     ' "$file" >> "$DB_FILE"
@@ -167,22 +176,40 @@ print_tree() {
     do
         local connector="|--"
         local node_color="$COLOR_FEATURE"
-        local label="$c"
         
-        if [ "$type" == "require" ]; then connector=">>"; fi
+        if [ "$type" == "require" ]; then 
+            connector=">>"
+        fi
+
+        # Determine the type label (included/dependency)
+        local type_label_part=""
+        if [ "$type" == "include" ]; then
+            type_label_part="(included)"
+        elif [ "$type" == "require" ]; then
+            type_label_part="(dependency)"
+        fi
+
+        # Determine the external label
+        local external_label_part=""
+        if [[ -z "${LOCAL_MAP[$c]}" ]]; then
+            external_label_part="[EXTERNAL]"
+            node_color="$COLOR_MISSING" # Apply external color
+        fi
+
+        # Construct the label string
+        local label="${c}"
+        if [ -n "$type_label_part" ]; then
+            label="${label} ${type_label_part}"
+        fi
+        if [ -n "$external_label_part" ]; then
+            label="${label} ${external_label_part}"
+        fi
 
         local p_count="${PLUGIN_COUNTS[$c]}"
         local count_str=""
         if [[ -n "$p_count" && "$p_count" -gt 0 ]]
         then
-            count_str=" ${COLOR_INFO}(${p_count} bundles)${COLOR_RESET}"
-        fi
-
-        if [[ -z "${LOCAL_MAP[$c]}" ]]
-        then
-            node_color="$COLOR_MISSING"
-            label="$c [EXTERNAL?]"
-            count_str=""
+            count_str=" ${COLOR_INFO}(Plugins: ${p_count})${COLOR_RESET}"
         fi
 
         echo -e "${prefix}${connector} ${node_color}${label}${COLOR_RESET}${count_str}"
@@ -203,7 +230,7 @@ echo "DEPENDENCY GRAPH"
 
 # 1. Specific Target Mode
 if [ -n "$TARGET_ROOT" ]; then
-    echo -e "Target Root: ${COLOR_PRODUCT}$TARGET_ROOT${COLOR_RESET}"
+    echo -e "Target Root: ${COLOR_PRODUCT}$TARGET_ROOT${COLOR_RESET}" 
     
     # Verify it exists in the index
     if [[ -z "${LOCAL_MAP[$TARGET_ROOT]}" ]]
@@ -214,9 +241,9 @@ if [ -n "$TARGET_ROOT" ]; then
     else
         # Get stats if available
         p_count="${PLUGIN_COUNTS[$TARGET_ROOT]}"
-        if [[ -n "$p_count" ]]
+        if [[ -n "$p_count" && "$p_count" -gt 0 ]]
         then
-            echo -e "${COLOR_INFO}(Contains ${p_count} plugins)${COLOR_RESET}"
+            echo -e "${COLOR_INFO}Included plugins: ${p_count}${COLOR_RESET}"
         fi
         echo ""
         print_tree "$TARGET_ROOT" " " ""
@@ -233,7 +260,7 @@ else
         count_str=""
         if [[ -n "$p_count" && "$p_count" -gt 0 ]]
         then
-            count_str=" ${COLOR_INFO}(Includes ${p_count} direct bundles)${COLOR_RESET}"
+            count_str=" ${COLOR_INFO}(Includes ${p_count} direct plugins)${COLOR_RESET}"
         fi
 
         echo -e "${COLOR_PRODUCT}[PRODUCT] $product_id${COLOR_RESET}${count_str}"
