@@ -4,7 +4,7 @@
 # Purpose: Visualize dependencies (Products -> Features -> Features).
 #          Aggregates plugin counts instead of listing them individually.
 #          Supports targeting a specific Feature ID as the root.
-# Compatibility: Widows (Git Bash/WSL), Linux. Requires Bash 4.0+
+# Compatibility: Windows (Git Bash/WSL), Linux. Requires Bash 4.0+
 # Usage: ./dependency_graph.sh [directory] [optional_root_id]
 # ---------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ do    awk -v fname="$file" \
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 pid = substr(raw, 5, length(raw)-5)
-                print pid > "'""$AVAILABLE_FILE""'"
+                print pid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product: " pid > "/dev/stderr"
             }
         }
@@ -64,7 +64,7 @@ do    awk -v fname="$file" \
                 n=split(fname, parts, "/")
                 pid=parts[n] 
                 sub(/\.product$/, "", pid)
-                print pid > "'""$AVAILABLE_FILE""'"
+                print pid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product (by filename): " pid > "/dev/stderr"
             }
         }
@@ -81,8 +81,8 @@ do    awk -v fname="$file" \
         
         END { 
             if (pid != "") {
-                print pid > "'""$ROOTS_FILE""'"
-                print pid, p_count > "'""$COUNTS_FILE""'"
+                print pid >> "'""$ROOTS_FILE""'"
+                print pid, p_count >> "'""$COUNTS_FILE""'"
             }
         }
     ' "$file" >> "$DB_FILE"
@@ -103,7 +103,7 @@ do    awk '
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
-                print fid > "'""$AVAILABLE_FILE""'"
+                print fid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Feature: " fid > "/dev/stderr"
             }
         }
@@ -137,7 +137,7 @@ do    awk '
 
         END {
             if (fid != "") {
-                print fid, p_count > "'""$COUNTS_FILE""'"
+                print fid, p_count >> "'""$COUNTS_FILE""'"
             }
         }
     ' "$file" >> "$DB_FILE"
