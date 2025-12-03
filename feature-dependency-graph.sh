@@ -54,6 +54,7 @@ do    awk -v fname="$file" \
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 pid = substr(raw, 5, length(raw)-5)
+                sub(/^[[:space:]]+|[[:space:]]+$/, "", pid)
                 print pid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product: " pid > "/dev/stderr"
             }
@@ -64,6 +65,7 @@ do    awk -v fname="$file" \
                 n=split(fname, parts, "/")
                 pid=parts[n] 
                 sub(/\.product$/, "", pid)
+                sub(/^[[:space:]]+|[[:space:]]+$/, "", pid)
                 print pid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Product (by filename): " pid > "/dev/stderr"
             }
@@ -75,6 +77,7 @@ do    awk -v fname="$file" \
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
+                sub(/^[[:space:]]+|[[:space:]]+$/, "", fid)
                 if (pid != "") print pid, fid, "product_ref"
             }
         }
@@ -103,6 +106,7 @@ do    awk '
             if (match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 fid = substr(raw, 5, length(raw)-5)
+                sub(/^[[:space:]]+|[[:space:]]+$/, "", fid)
                 print fid >> "'""$AVAILABLE_FILE""'"
                 print "[INDEX] Found Feature: " fid > "/dev/stderr"
             }
@@ -116,6 +120,7 @@ do    awk '
             if (fid != "" && match($0, /id="[^"]+"/)) {
                 raw = substr($0, RSTART, RLENGTH)
                 child = substr(raw, 5, length(raw)-5)
+                sub(/^[[:space:]]+|[[:space:]]+$/, "", child)
                 print fid, child, "include"
             }
         }
@@ -125,11 +130,13 @@ do    awk '
                 if (match($0, /feature="[^"]+"/)) {
                     raw = substr($0, RSTART, RLENGTH)
                     child = substr(raw, 10, length(raw)-10)
+                    sub(/^[[:space:]]+|[[:space:]]+$/, "", child)
                     print fid, child, "require"
                 }
                 if (match($0, /plugin="[^"]+"/)) {
                     raw = substr($0, RSTART, RLENGTH)
                     child = substr(raw, 9, length(raw)-9)
+                    sub(/^[[:space:]]+|[[:space:]]+$/, "", child)
                     print fid, child, "require"
                 }
             }
@@ -142,6 +149,9 @@ do    awk '
         }
     ' "$file" >> "$DB_FILE"
 done
+
+# Deduplicate database to handle multiple files defining the same feature (e.g. source vs build)
+sort -u "$DB_FILE" -o "$DB_FILE"
 
 # ===========================================================================
 # PHASE 2: VISUALIZATION PREP
