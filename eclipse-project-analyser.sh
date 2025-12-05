@@ -208,19 +208,17 @@ done
 
 # 2. Process Plugin Projects (if not already processed)
 for dir in "${sorted_plugins[@]}"; do
+    [[ -z "$dir" ]] && continue
     if [[ -n "${processed_dirs[$dir]}" ]]; then
         continue
     fi
 
-    # Double check if it's a valid plugin project
-    if is_plugin_project "$dir"; then
-        plugin_name=$(get_plugin_name "$dir")
-        plugin_version=$(get_plugin_version "$dir")
-        java_count=$(count_java_files "$dir")
-        plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
-        echo "  ✓ [Plugin]  $plugin_name"
-        processed_dirs["$dir"]=1
-    fi
+    plugin_name=$(get_plugin_name "$dir")
+    plugin_version=$(get_plugin_version "$dir")
+    java_count=$(count_java_files "$dir")
+    plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
+    echo "  ✓ [Plugin]  $plugin_name"
+    processed_dirs["$dir"]=1
 done
 
 # 3. Process Product Definitions
