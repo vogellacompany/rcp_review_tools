@@ -32,12 +32,6 @@ is_feature_project() {
     [[ -f "$dir/feature.xml" ]]
 }
 
-# Funktion: Prüft ob Verzeichnis ein Product enthält (Check if directory contains a product)
-is_product_project() {
-    local dir="$1"
-    find "$dir" -maxdepth 2 -name "*.product" -type f 2>/dev/null | grep -q .
-}
-
 # Funktion: Extrahiert Plugin-Name aus MANIFEST.MF (Extract plugin name from MANIFEST.MF)
 get_plugin_name() {
     local dir="$1"
@@ -181,13 +175,13 @@ while IFS= read -r -d '' dir; do
         plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
         echo "  ✓ [Plugin]  $plugin_name"
     # Product-Projekte (nur wenn nicht bereits als Feature oder Plugin gezählt) (Product projects - only if not already counted as feature or plugin)
-    elif is_product_project "$dir"; then
+    elif product_files_found=$(get_product_files "$dir") && [[ -n "$product_files_found" ]]; then
         while IFS= read -r product_file; do
             product_name=$(get_product_name "$product_file")
             product_id=$(get_product_id "$product_file")
             products+=("$product_name|$product_id|$product_file")
             echo "  ✓ [Product] $product_name"
-        done < <(get_product_files "$dir")
+        done <<< "$product_files_found"
     fi
 done < <(find "$WORKSPACE_PATH" -type d \
     ! -path "*/.git/*" \

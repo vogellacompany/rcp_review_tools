@@ -82,9 +82,11 @@ while IFS= read -r -d '' file; do
     
         # Prüfen ob es Test-Code ist (case-insensitive) (Check if it's test code (case-insensitive))
         # Normalisiere Pfad-Trennzeichen für Windows-Kompatibilität (Normalize path separators for Windows compatibility)
-        file_normalized=$(echo "$file" | tr '\\' '/' | tr '[:upper:]' '[:lower:]')
+        file_normalized=${file//\\/}
+        file_normalized=${file_normalized,,}
+        
         is_test=0
-        if echo "$file_normalized" | grep -qE '/(test|tests)/'; then
+        if [[ "$file_normalized" =~ /(test|tests)/ ]]; then
             is_test=1
         fi
     
@@ -136,7 +138,8 @@ printf "% -30s %15s %15s %15s\n" "Projekt" "Prod-Code" "Test-Code" "Gesamt"
 printf "% -30s %15s %15s %15s\n" "$(printf '%.0s-' {1..30})" "$(printf '%.0s-' {1..15})" "$(printf '%.0s-' {1..15})" "$(printf '%.0s-' {1..15})"
 
 # Projekte sortiert ausgeben (Output sorted projects)
-for project in $(echo "${!projects[@]}" | tr ' ' '\n' | sort); do
+for project in $(echo "${!projects[@]}" | tr ' ' '\n' | sort);
+ do
     prod_code=${project_prod_code[$project]:-0}
     test_code=${project_test_code[$project]:-0}
     total_code=$((prod_code + test_code))
