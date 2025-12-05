@@ -2,113 +2,120 @@
 
 ################################################################################
 # Eclipse RCP Project Analyzer
-# Analysiert rekursiv Eclipse RCP Projekte und generiert eine Markdown-Übersicht
-# (Recursively analyzes Eclipse RCP projects and generates a Markdown overview)
+# Recursively analyzes Eclipse RCP projects and generates a Markdown overview
 ################################################################################
 
-# Funktion: Verwendung anzeigen (Show usage) 
+# Function: Show usage 
 show_usage() {
     echo "Usage: $0 <workspace-path> [output-file]"
     echo ""
     echo "Arguments:"
-    echo "  workspace-path    Pfad zum Eclipse RCP Workspace/Repository"
-    echo "  output-file       (Optional) Output Markdown Datei (Standard: eclipse_rcp_report.md)"
+    echo "  workspace-path    Path to the Eclipse RCP Workspace/Repository"
+    echo "  output-file       (Optional) Output Markdown file (Default: eclipse_rcp_report.md)"
     echo ""
-    echo "Beispiel:"
+    echo "Example:"
     echo "  $0 /path/to/workspace"
     echo "  $0 /path/to/workspace report.md"
     exit 1
 }
 
-# Funktion: Prüft ob Verzeichnis ein Plugin-Projekt ist (Check if directory is a plugin project)
+# Function: Check if directory is a plugin project
 is_plugin_project() {
     local dir="$1"
     [[ -f "$dir/META-INF/MANIFEST.MF" ]] || [[ -f "$dir/plugin.xml" ]]
 }
 
-# Funktion: Prüft ob Verzeichnis ein Feature-Projekt ist (Check if directory is a feature project)
+# Function: Check if directory is a feature project
 is_feature_project() {
     local dir="$1"
     [[ -f "$dir/feature.xml" ]]
 }
 
-# Funktion: Extrahiert Plugin-Name aus MANIFEST.MF (Extract plugin name from MANIFEST.MF)
+# Function: Extract plugin name from MANIFEST.MF
 get_plugin_name() {
     local dir="$1"
     local manifest="$dir/META-INF/MANIFEST.MF"
 
     if [[ -f "$manifest" ]]; then
-        grep "^Bundle-SymbolicName:" "$manifest" | sed 's/Bundle-SymbolicName: *//;s/;.*//' | tr -d '\r\n'
+        grep "^Bundle-SymbolicName:" "$manifest" | sed 's/Bundle-SymbolicName: *//;s/;.*//' | tr -d '\r'
     else
         basename "$dir"
     fi
 }
 
-# Funktion: Extrahiert Bundle-Version aus MANIFEST.MF (Extract bundle version from MANIFEST.MF)
+# Function: Extract bundle version from MANIFEST.MF
 get_plugin_version() {
     local dir="$1"
     local manifest="$dir/META-INF/MANIFEST.MF"
 
     if [[ -f "$manifest" ]]; then
-        grep "^Bundle-Version:" "$manifest" | sed 's/Bundle-Version: *//;s/;.*//' | tr -d '\r\n'
+        grep "^Bundle-Version:" "$manifest" | sed 's/Bundle-Version: *//;s/;.*//' | tr -d '\r'
     else
         echo ""
     fi
 }
 
-# Funktion: Zählt Java-Dateien in einem Projekt (Count Java files in a project)
+# Function: Count Java files in a project
 count_java_files() {
     local dir="$1"
-    find "$dir" -name "*.java" -type f 2>/dev/null | wc -l
+    find "$dir" -name "*.java" -type f | wc -l
 }
 
-# Funktion: Extrahiert Feature-ID aus feature.xml (Extract feature ID from feature.xml)
+# Function: Extract Feature ID from feature.xml
 get_feature_id() {
     local dir="$1"
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -o 'id="[^"]*"' "$feature_xml" | head -1 | sed 's/id="//;s/"$//'
+        # Note: Parsing XML with grep/sed can be fragile. This attempts to extract the first 'id' attribute found.
+        # It may not always correspond to the primary feature ID if the XML structure is complex or malformed.
+        grep -o 'id="[^"]*"' "$feature_xml" | head -1 | sed 's/id=\"//;s/"$//'
     else
         basename "$dir"
     fi
 }
 
-# Funktion: Extrahiert Feature-Version aus feature.xml (Extract feature version from feature.xml)
+# Function: Extract Feature Version from feature.xml
 get_feature_version() {
     local dir="$1"
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -o 'version="[^"]*"' "$feature_xml" | head -1 | sed 's/version="//;s/"$//'
+        # Note: Parsing XML with grep/sed can be fragile. This attempts to extract the first 'version' attribute found.
+        # It may not always correspond to the primary feature version if the XML structure is complex or malformed.
+        grep -o 'version="[^"]*"' "$feature_xml" | head -1 | sed 's/version=\"//;s/"$//'
     else
         echo ""
     fi
 }
 
-# Funktion: Findet Product-Dateien (Find product files)
+# Function: Find product files
 get_product_files() {
     local dir="$1"
-    find "$dir" -maxdepth 2 -name "*.product" -type f 2>/dev/null
+    find "$dir" -maxdepth 2 -name "*.product" -type f
 }
 
-# Funktion: Extrahiert Product-Name aus .product Datei (Extract product name from .product file)
+# Function: Extract Product Name from .product file
 get_product_name() {
     local product_file="$1"
 
     if [[ -f "$product_file" ]]; then
-        grep -o 'name="[^"]*"' "$product_file" | head -1 | sed 's/name="//;s/"$//'
+        # Note: Parsing XML with grep/sed can be fragile. This attempts to extract the first 'name' attribute found.
+        # It may not always correspond to the primary product name if the XML structure is complex or malformed.
+        grep -o 'name="[^"]*"' "$product_file" | head -1 | sed 's/name=\"//;s/"$//'
     else
         basename "$product_file" .product
     fi
 }
 
-# Funktion: Extrahiert Product-ID aus .product Datei (Extract product ID from .product file)
+# Function: Extract Product ID from .product file
 get_product_id() {
     local product_file="$1"
 
     if [[ -f "$product_file" ]]; then
-        grep -o 'id="[^"]*"' "$product_file" | head -1 | sed 's/id="//;s/"$//'
+        # Note: Parsing XML with grep/sed can be fragile. This attempts to extract the first 'id' attribute found.
+        # It may not always correspond to the primary product ID if the XML structure is complex or malformed.
+        grep -o 'id="[^"]*"' "$product_file" | head -1 | sed 's/id=\"//;s/"$//'
     else
         echo ""
     fi
@@ -122,7 +129,7 @@ fi
 WORKSPACE_PATH="$1"
 OUTPUT_FILE="${2:-eclipse_rcp_report.md}"
 
-# Workspace-Pfad validieren (Validate workspace path)
+# Workspace-Pfad validieren
 if [[ ! -d "$WORKSPACE_PATH" ]]; then
     echo "Error: Directory '$WORKSPACE_PATH' does not exist!"
     exit 1
@@ -136,45 +143,45 @@ echo "Workspace: $WORKSPACE_PATH"
 echo "Output:    $OUTPUT_FILE"
 echo ""
 
-# Arrays für gefundene Projekte (Arrays for found projects)
+# Arrays für gefundene Projekte
 declare -a plugins
 declare -a features
 declare -a products
 
-# Assoziatives Array um bereits verarbeitete Verzeichnisse zu tracken (Associative array to track processed directories)
+# Assoziatives Array um bereits verarbeitete Verzeichnisse zu tracken
 declare -A processed_dirs
 
-# Workspace rekursiv durchsuchen (Recursively search workspace)
+# Workspace rekursiv durchsuchen
 echo "Searching recursively for Eclipse RCP projects..."
 echo ""
 
-# Verwende find für rekursive Suche, schließe aber bestimmte Verzeichnisse aus (Use find for recursive search, but exclude certain directories)
+# Verwende find für rekursive Suche, schließe aber bestimmte Verzeichnisse aus
 while IFS= read -r -d '' dir; do
-    # Überspringe, wenn dieses Verzeichnis bereits verarbeitet wurde (Skip if this directory has already been processed)
+    # Überspringe, wenn dieses Verzeichnis bereits verarbeitet wurde
     if [[ -n "${processed_dirs[$dir]}" ]]; then
         continue
     fi
 
-    # Markiere Verzeichnis als verarbeitet (Mark directory as processed)
+    # Markiere Verzeichnis als verarbeitet
     processed_dirs[$dir]=1
 
     # Prüfe Projekttyp mit Priorität: Feature > Plugin > Product
-    # Ein Verzeichnis wird nur einmal gezählt (Check project type with priority: Feature > Plugin > Product. A directory is counted only once)
+    # Ein Verzeichnis wird nur einmal gezählt
 
-    # Feature-Projekte (höchste Priorität, da Features auch Plugin-Dateien haben können) (Feature projects - highest priority)
+    # Feature-Projekte (höchste Priorität, da Features auch Plugin-Dateien haben können)
     if is_feature_project "$dir"; then
         feature_id=$(get_feature_id "$dir")
         feature_version=$(get_feature_version "$dir")
         features+=("$feature_id|$feature_version|$dir")
         echo "  ✓ [Feature] $feature_id"
-    # Plugin-Projekte (nur wenn nicht bereits als Feature gezählt) (Plugin projects - only if not already counted as feature)
+    # Plugin-Projekte (nur wenn nicht bereits als Feature gezählt)
     elif is_plugin_project "$dir"; then
         plugin_name=$(get_plugin_name "$dir")
         plugin_version=$(get_plugin_version "$dir")
         java_count=$(count_java_files "$dir")
         plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
         echo "  ✓ [Plugin]  $plugin_name"
-    # Product-Projekte (nur wenn nicht bereits als Feature oder Plugin gezählt) (Product projects - only if not already counted as feature or plugin)
+    # Product-Projekte (nur wenn nicht bereits als Feature oder Plugin gezählt)
     elif product_files_found=$(get_product_files "$dir") && [[ -n "$product_files_found" ]]; then
         while IFS= read -r product_file; do
             product_name=$(get_product_name "$product_file")
@@ -214,7 +221,7 @@ echo "Generating Markdown Report..."
     echo "**Workspace:** \`$WORKSPACE_PATH\`"
     echo ""
     
-    # Zusammenfassung (Summary)
+    # Summary
     echo "## 📊 Summary"
     echo "|                       Type                       |                    Count                    |"
     echo "|:----------------------------------------------:|:----------------------------------------------:|"
@@ -222,7 +229,7 @@ echo "Generating Markdown Report..."
     echo "| Feature Projects                               | ${#features[@]} |"
     echo "| Product Definitions                            | ${#products[@]} |"
     
-    # Plugin-Projekte auflisten (List plugin projects)
+    # List plugin projects
     echo "## 🔌 Plugin Projects"
     if [[ ${#plugins[@]} -eq 0 ]]; then
         echo "_No plugin projects found._"
@@ -245,7 +252,7 @@ echo "Generating Markdown Report..."
     fi
     echo ""
     
-    # Feature-Projekte auflisten (List feature projects)
+    # List feature projects
     echo "## 📦 Feature Projects"
     if [[ ${#features[@]} -eq 0 ]]; then
         echo "_No feature projects found._"
@@ -267,7 +274,7 @@ echo "Generating Markdown Report..."
     fi
     echo ""
     
-    # Product-Definitionen auflisten (List product definitions)
+    # List product definitions
     echo "## 🚀 Product Definitions"
     if [[ ${#products[@]} -eq 0 ]]; then
         echo "_No product definitions found._"
@@ -289,7 +296,7 @@ echo "Generating Markdown Report..."
     fi
     echo ""
     
-    # Statistiken (Statistics)
+    # Statistics
     echo "## 📈 Statistics"
     echo "### Java Files by Plugin"
     if [[ ${#plugins[@]} -gt 0 ]]; then
@@ -301,7 +308,7 @@ echo "Generating Markdown Report..."
             total_java=$((total_java + java_count))
         done
         echo ""
-        echo "================================================================"
+        echo "==============================================================="
         printf "% -60s %6d Java Files\n" "TOTAL" "$total_java"
         echo '```'
     
@@ -315,7 +322,7 @@ echo "Generating Markdown Report..."
     fi
     echo ""
     
-    # Verzeichnisstruktur (Directory structure)
+    # Directory structure
     echo "## 📁 Directory Structure"
     echo "### Grouped by Project Type"
     echo '```'

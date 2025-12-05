@@ -14,14 +14,14 @@ echo -e "${BLUE}    Java Code Line Counter${NC}"
 echo -e "${BLUE}    (Production vs Test Code)${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo -e "${YELLOW}WARNING: Comment counting is an approximation using regex.${NC}"
-echo -e "${YELLOW}It may not accurately handle inline comments, strings, or complex blocks.${NC}"
+echo -e "${YELLOW}It may not accurately handle inline comments (e.g., int x = 5; // comment), complex block comments, or strings containing comment markers (e.g., String url = \"http://example.com\";).${NC}"
 echo ""
 
 # Verzeichnis bestimmen (aktuelles Verzeichnis wenn kein Argument)
 SEARCH_DIR="${1:-.}"
 
 # Prüfen ob Verzeichnis existiert
-if [ ! -d "$SEARCH_DIR" ]; then
+if [[ ! -d "$SEARCH_DIR" ]]; then
     echo -e "${RED}Fehler: Verzeichnis '$SEARCH_DIR' existiert nicht!${NC}"
     exit 1
 fi
@@ -32,7 +32,7 @@ echo ""
 count_lines() {
     local file="$1"
 
-    if [ ! -f "$file" ]; then
+    if [[ ! -f "$file" ]]; then
         echo "0 0 0 0"
         return
     fi
@@ -49,7 +49,7 @@ count_lines() {
 
     # Code-Zeilen
     local code=$((lines - blank - comments))
-    if [ "$code" -lt 0 ]; then
+    if [[ "$code" -lt 0 ]]; then
         code=0
     fi
 
@@ -103,7 +103,7 @@ while IFS= read -r -d '' file; do
         # Zu Projekt-Statistiken hinzufügen (Add to project statistics)
         projects[$project]=1
     
-        if [ "$is_test" -eq 1 ]; then
+        if [[ "$is_test" -eq 1 ]]; then
             # Test-Code
             project_test_code[$project]=$(((${project_test_code[$project]:-0} + l_code)))
             project_test_files[$project]=$(((${project_test_files[$project]:-0} + 1)))
@@ -119,7 +119,7 @@ while IFS= read -r -d '' file; do
 done < <(find "$SEARCH_DIR" -type f -name "*.java" -print0)
 
 # Prüfen ob Java-Dateien gefunden wurden (Check if Java files were found)
-if [ ${#projects[@]} -eq 0 ]; then
+if [[ ${#projects[@]} -eq 0 ]]; then
     echo -e "${YELLOW}Keine Java-Dateien gefunden!${NC}" # No Java files found!
     exit 0
 fi
@@ -158,7 +158,7 @@ printf "% -30s ${GREEN}%15d${NC} ${YELLOW}%15d${NC} %15d\n" "GESAMT (Dateien)" "
 echo -e "${BLUE}========================================${NC}"
 
 # Test-Coverage berechnen (Calculate Test Coverage)
-if [ "$TOTAL_PROD_CODE" -gt 0 ]; then
+if [[ "$TOTAL_PROD_CODE" -gt 0 ]]; then
     coverage=$((TOTAL_TEST_CODE * 100 / TOTAL_PROD_CODE))
     echo -e "Test-Code-Verhältnis: ${CYAN}${coverage}%${NC} (Test-Zeilen / Prod-Zeilen)" # Test-Code-Ratio: (Test Lines / Prod Lines)
 fi
