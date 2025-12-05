@@ -7,7 +7,8 @@
 ################################################################################
 
 # Funktion: Verwendung anzeigen (Show usage) 
-show_usage() {    echo "Usage: $0 <workspace-path> [output-file]"
+show_usage() {
+    echo "Usage: $0 <workspace-path> [output-file]"
     echo ""
     echo "Arguments:"
     echo "  workspace-path    Pfad zum Eclipse RCP Workspace/Repository"
@@ -20,7 +21,8 @@ show_usage() {    echo "Usage: $0 <workspace-path> [output-file]"
 }
 
 # Funktion: Prüft ob Verzeichnis ein Plugin-Projekt ist (Check if directory is a plugin project)
-is_plugin_project() {    local dir="$1"
+is_plugin_project() {
+    local dir="$1"
     [[ -f "$dir/META-INF/MANIFEST.MF" ]] || [[ -f "$dir/plugin.xml" ]]
 }
 
@@ -37,7 +39,8 @@ is_product_project() {
 }
 
 # Funktion: Extrahiert Plugin-Name aus MANIFEST.MF (Extract plugin name from MANIFEST.MF)
-get_plugin_name() {    local dir="$1"
+get_plugin_name() {
+    local dir="$1"
     local manifest="$dir/META-INF/MANIFEST.MF"
 
     if [[ -f "$manifest" ]]; then
@@ -60,7 +63,8 @@ get_plugin_version() {
 }
 
 # Funktion: Zählt Java-Dateien in einem Projekt (Count Java files in a project)
-count_java_files() {    local dir="$1"
+count_java_files() {
+    local dir="$1"
     find "$dir" -name "*.java" -type f 2>/dev/null | wc -l
 }
 
@@ -70,7 +74,7 @@ get_feature_id() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep '<feature' "$feature_xml" | grep -o 'id="[^"]*"' | head -1 | sed 's/id="//;s/"$//'
+        grep -o 'id="[^"]*"' "$feature_xml" | head -1 | sed 's/id="//;s/"$//'
     else
         basename "$dir"
     fi
@@ -82,14 +86,15 @@ get_feature_version() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep '<feature' "$feature_xml" | grep -o 'version="[^"]*"' | head -1 | sed 's/version="//;s/"$//'
+        grep -o 'version="[^"]*"' "$feature_xml" | head -1 | sed 's/version="//;s/"$//'
     else
         echo ""
     fi
 }
 
 # Funktion: Findet Product-Dateien (Find product files)
-get_product_files() {    local dir="$1"
+get_product_files() {
+    local dir="$1"
     find "$dir" -maxdepth 2 -name "*.product" -type f 2>/dev/null
 }
 
@@ -207,163 +212,151 @@ echo ""
 
 # Markdown-Report generieren (Generate Markdown report)
 echo "Generating Markdown Report..."
-cat > "$OUTPUT_FILE" << 'EOF'
-# Eclipse RCP Project Analysis Report
-EOF
-
-echo "**Analysis Date:** $(date '+%Y-%m-%d %H:%M:%S')" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
-echo "**Workspace:** \`$WORKSPACE_PATH\`" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
-
-# Zusammenfassung (Summary)
-cat >> "$OUTPUT_FILE" << EOF
-## 📊 Summary
-|                       Type                       |                    Count                    |
-|:----------------------------------------------:|:----------------------------------------------:|
-| Plugin Projects                                | ${#plugins[@]} |
-| Feature Projects                               | ${#features[@]} |
-| Product Definitions                            | ${#products[@]} |
-EOF
-
-# Plugin-Projekte auflisten (List plugin projects)
-cat >> "$OUTPUT_FILE" << 'EOF'
-## 🔌 Plugin Projects
-EOF
-if [[ ${#plugins[@]} -eq 0 ]]; then
-    echo "_No plugin projects found._" >> "$OUTPUT_FILE"
-else
-    echo "| # | Plugin Name | Version | Java Files |" >> "$OUTPUT_FILE"
-    echo "|:--:|:---|:---|:---:|" >> "$OUTPUT_FILE"
-
-    counter=1
-    for plugin_entry in "${plugins[@]}"; do
-        IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
-        version_display="${plugin_version:-n/a}"
-
-        printf "| %d | %s | %s | %d |\n" \
-            "$counter" \
-            "\`$plugin_name\`" \
-            "$version_display" \
-            "$java_count" >> "$OUTPUT_FILE"
-        ((counter++))
-    done
-fi
-echo "" >> "$OUTPUT_FILE"
-
-# Feature-Projekte auflisten (List feature projects)
-cat >> "$OUTPUT_FILE" << 'EOF'
-## 📦 Feature Projects
-EOF
-if [[ ${#features[@]} -eq 0 ]]; then
-    echo "_No feature projects found._" >> "$OUTPUT_FILE"
-else
-    echo "| # | Feature ID | Version |" >> "$OUTPUT_FILE"
-    echo "|:--:|:---|:---|" >> "$OUTPUT_FILE"
-
-    counter=1
-    for feature_entry in "${features[@]}"; do
-        IFS='|' read -r feature_id feature_version feature_path <<< "$feature_entry"
-        version_display="${feature_version:-n/a}"
-
-        printf "| %d | %s | %s |\n" \
-            "$counter" \
-            "\`$feature_id\`" \
-            "$version_display" >> "$OUTPUT_FILE"
-        ((counter++))
-    done
-fi
-echo "" >> "$OUTPUT_FILE"
-
-# Product-Definitionen auflisten (List product definitions)
-cat >> "$OUTPUT_FILE" << 'EOF'
-## 🚀 Product Definitions
-EOF
-if [[ ${#products[@]} -eq 0 ]]; then
-    echo "_No product definitions found._" >> "$OUTPUT_FILE"
-else
-    echo "| # | Product Name | Product ID |" >> "$OUTPUT_FILE"
-    echo "|:--:|:---|:---|" >> "$OUTPUT_FILE"
-
-    counter=1
-    for product_entry in "${products[@]}"; do
-        IFS='|' read -r product_name product_id product_file <<< "$product_entry"
-        id_display="${product_id:-n/a}"
-
-        printf "| %d | %s | %s |\n" \
-            "$counter" \
-            "\`$product_name\`" \
-            "\`$id_display\`" >> "$OUTPUT_FILE"
-        ((counter++))
-    done
-fi
-echo "" >> "$OUTPUT_FILE"
-
-# Statistiken (Statistics)
-cat >> "$OUTPUT_FILE" << EOF
-## 📈 Statistics
-### Java Files by Plugin
-EOF
-if [[ ${#plugins[@]} -gt 0 ]]; then
-    total_java=0
-    echo '```' >> "$OUTPUT_FILE"
-    for plugin_entry in "${plugins[@]}"; do
-        IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
-        printf "% -60s %6d Java Files\n" "$plugin_name" "$java_count" >> "$OUTPUT_FILE"
-        total_java=$((total_java + java_count))
-    done
-    echo "" >> "$OUTPUT_FILE"
-    echo "================================================================"
-    printf "% -60s %6d Java Files\n" "TOTAL" "$total_java" >> "$OUTPUT_FILE"
-    echo '```' >> "$OUTPUT_FILE"
-
-    echo "" >> "$OUTPUT_FILE"
-    echo "### Distribution" >> "$OUTPUT_FILE"
-    echo "" >> "$OUTPUT_FILE"
-    echo "- **Average:** $((total_java / ${#plugins[@]})) Java files per plugin" >> "$OUTPUT_FILE"
-    echo "- **Total:** $total_java Java files in ${#plugins[@]} plugins" >> "$OUTPUT_FILE"
-else
-    echo "_No statistics available._" >> "$OUTPUT_FILE"
-fi
-echo "" >> "$OUTPUT_FILE"
-
-# Verzeichnisstruktur (Directory structure)
-cat >> "$OUTPUT_FILE" << 'EOF'
-## 📁 Directory Structure
-### Grouped by Project Type
-EOF
-echo '```' >> "$OUTPUT_FILE"
-if [[ ${#plugins[@]} -gt 0 ]]; then
-    echo "Plugins:" >> "$OUTPUT_FILE"
-    for plugin_entry in "${plugins[@]}"; do
-        IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
-        relative_path="${plugin_path#$WORKSPACE_PATH/}"
-        echo "  └─ $relative_path" >> "$OUTPUT_FILE"
-    done
-fi
-if [[ ${#features[@]} -gt 0 ]]; then
-    echo "" >> "$OUTPUT_FILE"
-    echo "Features:" >> "$OUTPUT_FILE"
-    for feature_entry in "${features[@]}"; do
-        IFS='|' read -r feature_id feature_version feature_path <<< "$feature_entry"
-        relative_path="${feature_path#$WORKSPACE_PATH/}"
-        echo "  └─ $relative_path" >> "$OUTPUT_FILE"
-    done
-fi
-if [[ ${#products[@]} -gt 0 ]]; then
-    echo "" >> "$OUTPUT_FILE"
-    echo "Products:" >> "$OUTPUT_FILE"
-    for product_entry in "${products[@]}"; do
-        IFS='|' read -r product_name product_id product_file <<< "$product_entry"
-        relative_path="${product_file#$WORKSPACE_PATH/}"
-        echo "  └─ $relative_path" >> "$OUTPUT_FILE"
-    done
-fi
-echo '```' >> "$OUTPUT_FILE"
-
-echo "" >> "$OUTPUT_FILE"
-echo "---" >> "$OUTPUT_FILE"
-echo "_Generated with Eclipse RCP Analyzer on $(date '+%Y-%m-%d %H:%M:%S')_" >> "$OUTPUT_FILE"
+{
+    echo "# Eclipse RCP Project Analysis Report"
+    
+    echo "**Analysis Date:** $(date '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+    echo "**Workspace:** \`$WORKSPACE_PATH\`"
+    echo ""
+    
+    # Zusammenfassung (Summary)
+    echo "## 📊 Summary"
+    echo "|                       Type                       |                    Count                    |"
+    echo "|:----------------------------------------------:|:----------------------------------------------:|"
+    echo "| Plugin Projects                                | ${#plugins[@]} |"
+    echo "| Feature Projects                               | ${#features[@]} |"
+    echo "| Product Definitions                            | ${#products[@]} |"
+    
+    # Plugin-Projekte auflisten (List plugin projects)
+    echo "## 🔌 Plugin Projects"
+    if [[ ${#plugins[@]} -eq 0 ]]; then
+        echo "_No plugin projects found._"
+    else
+        echo "| # | Plugin Name | Version | Java Files |"
+        echo "|:--:|:---|:---|:---:|"
+    
+        counter=1
+        for plugin_entry in "${plugins[@]}"; do
+            IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
+            version_display="${plugin_version:-n/a}"
+    
+            printf "| %d | %s | %s | %d |\n" \
+                "$counter" \
+                "\`$plugin_name\`" \
+                "$version_display" \
+                "$java_count"
+            ((counter++))
+        done
+    fi
+    echo ""
+    
+    # Feature-Projekte auflisten (List feature projects)
+    echo "## 📦 Feature Projects"
+    if [[ ${#features[@]} -eq 0 ]]; then
+        echo "_No feature projects found._"
+    else
+        echo "| # | Feature ID | Version |"
+        echo "|:--:|:---|:---:|"
+    
+        counter=1
+        for feature_entry in "${features[@]}"; do
+            IFS='|' read -r feature_id feature_version feature_path <<< "$feature_entry"
+            version_display="${feature_version:-n/a}"
+    
+            printf "| %d | %s | %s |\n" \
+                "$counter" \
+                "\`$feature_id\`" \
+                "$version_display"
+            ((counter++))
+        done
+    fi
+    echo ""
+    
+    # Product-Definitionen auflisten (List product definitions)
+    echo "## 🚀 Product Definitions"
+    if [[ ${#products[@]} -eq 0 ]]; then
+        echo "_No product definitions found._"
+    else
+        echo "| # | Product Name | Product ID |"
+        echo "|:--:|:---|:---:|"
+    
+        counter=1
+        for product_entry in "${products[@]}"; do
+            IFS='|' read -r product_name product_id product_file <<< "$product_entry"
+            id_display="${product_id:-n/a}"
+    
+            printf "| %d | %s | %s |\n" \
+                "$counter" \
+                "\`$product_name\`" \
+                "\`$id_display\`"
+            ((counter++))
+        done
+    fi
+    echo ""
+    
+    # Statistiken (Statistics)
+    echo "## 📈 Statistics"
+    echo "### Java Files by Plugin"
+    if [[ ${#plugins[@]} -gt 0 ]]; then
+        total_java=0
+        echo '```'
+        for plugin_entry in "${plugins[@]}"; do
+            IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
+            printf "% -60s %6d Java Files\n" "$plugin_name" "$java_count"
+            total_java=$((total_java + java_count))
+        done
+        echo ""
+        echo "================================================================"
+        printf "% -60s %6d Java Files\n" "TOTAL" "$total_java"
+        echo '```'
+    
+        echo ""
+        echo "### Distribution"
+        echo ""
+        echo "- **Average:** $((total_java / ${#plugins[@]})) Java files per plugin"
+        echo "- **Total:** $total_java Java files in ${#plugins[@]} plugins"
+    else
+        echo "_No statistics available._"
+    fi
+    echo ""
+    
+    # Verzeichnisstruktur (Directory structure)
+    echo "## 📁 Directory Structure"
+    echo "### Grouped by Project Type"
+    echo '```'
+    if [[ ${#plugins[@]} -gt 0 ]]; then
+        echo "Plugins:"
+        for plugin_entry in "${plugins[@]}"; do
+            IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
+            relative_path="${plugin_path#$WORKSPACE_PATH/}"
+            echo "  └─ $relative_path"
+        done
+    fi
+    if [[ ${#features[@]} -gt 0 ]]; then
+        echo ""
+        echo "Features:"
+        for feature_entry in "${features[@]}"; do
+            IFS='|' read -r feature_id feature_version feature_path <<< "$feature_entry"
+            relative_path="${feature_path#$WORKSPACE_PATH/}"
+            echo "  └─ $relative_path"
+        done
+    fi
+    if [[ ${#products[@]} -gt 0 ]]; then
+        echo ""
+        echo "Products:"
+        for product_entry in "${products[@]}"; do
+            IFS='|' read -r product_name product_id product_file <<< "$product_entry"
+            relative_path="${product_file#$WORKSPACE_PATH/}"
+            echo "  └─ $relative_path"
+        done
+    fi
+    echo '```'
+    
+    echo ""
+    echo "---"
+    echo "_Generated with Eclipse RCP Analyzer on $(date '+%Y-%m-%d %H:%M:%S')_"
+} > "$OUTPUT_FILE"
 
 echo "✓ Report successfully generated!"
 echo ""

@@ -13,6 +13,8 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}    Java Code Line Counter${NC}"
 echo -e "${BLUE}    (Production vs Test Code)${NC}"
 echo -e "${BLUE}========================================${NC}"
+echo -e "${YELLOW}WARNING: Comment counting is an approximation using regex.${NC}"
+echo -e "${YELLOW}It may not accurately handle inline comments, strings, or complex blocks.${NC}"
 echo ""
 
 # Verzeichnis bestimmen (aktuelles Verzeichnis wenn kein Argument)
@@ -43,7 +45,6 @@ count_lines() {
 
     # Kommentarzeilen
     # Note: This simple regex-based counting is an approximation.
-    # It does not fully handle inline comments, complex block comments, or strings containing comment markers.
     local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null || echo "0")
     local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null || echo "0")
     local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null || echo "0")
@@ -89,14 +90,13 @@ while IFS= read -r -d '' file; do
     
         # Projektname extrahieren (erster Ordner nach SEARCH_DIR) (Extract project name (first folder after SEARCH_DIR))
         relative_path="${file#$SEARCH_DIR}"
-        # Entferne führende Pfad-Trennzeichen (/ oder \) (Remove leading path separators (/ or \))
-        relative_path=$(echo "$relative_path" | sed 's:^[/\]::')
-        # Normalisiere zu forward slashes (Normalize to forward slashes)
-        relative_path=$(echo "$relative_path" | tr '\\' '/')
-    
+        # Normalize backslashes and remove leading slash for cross-platform compatibility
+        relative_path="${relative_path//\\/}"
+        relative_path="${relative_path#/}"
+        
         # Ersten Ordner als Projektnamen verwenden (Use first folder as project name)
-        if echo "$relative_path" | grep -q "/"; then
-            project=$(echo "$relative_path" | cut -d'/' -f1)
+        if [[ "$relative_path" == *"/"* ]]; then
+            project="${relative_path%%/*}"
         else
             project="root"
         fi
@@ -117,7 +117,7 @@ while IFS= read -r -d '' file; do
             TOTAL_PROD_CODE=$((TOTAL_PROD_CODE + l_code))
             TOTAL_PROD_FILES=$((TOTAL_PROD_FILES + 1))
         fi
-done < <(find "$SEARCH_DIR" -type f -name "*.java" -print0 2>/dev/null)
+done < <(find "$SEARCH_DIR" -type f -name "*.java" -print0)
 
 # Prüfen ob Java-Dateien gefunden wurden (Check if Java files were found)
 if [ ${#projects[@]} -eq 0 ]; then
