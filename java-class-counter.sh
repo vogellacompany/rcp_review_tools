@@ -38,17 +38,14 @@ count_lines() {
     fi
 
     # Gesamtzeilen
-    local lines=$(wc -l < "$file" 2>/dev/null | awk '{print $1}' || echo "0")
+    local lines=$(wc -l < "$file" 2>/dev/null || echo "0")
 
     # Leerzeilen
     local blank=$(grep -c "^[[:space:]]*$" "$file" 2>/dev/null || echo "0")
 
     # Kommentarzeilen
     # Note: This simple regex-based counting is an approximation.
-    local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null || echo "0")
-    local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null || echo "0")
-    local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null || echo "0")
-    local comments=$((single_comments + multi_comments + comment_start))
+    local comments=$(grep -c -E '^[[:space:]]*(\/\/|\*|\/\*)' "$file" 2>/dev/null || echo "0")
 
     # Code-Zeilen
     local code=$((lines - blank - comments))
@@ -138,8 +135,8 @@ printf "% -30s %15s %15s %15s\n" "Projekt" "Prod-Code" "Test-Code" "Gesamt"
 printf "% -30s %15s %15s %15s\n" "$(printf '%.0s-' {1..30})" "$(printf '%.0s-' {1..15})" "$(printf '%.0s-' {1..15})" "$(printf '%.0s-' {1..15})"
 
 # Projekte sortiert ausgeben (Output sorted projects)
-for project in $(echo "${!projects[@]}" | tr ' ' '\n' | sort);
- do
+printf '%s\n' "${!projects[@]}" | sort | while IFS= read -r project;
+do
     prod_code=${project_prod_code[$project]:-0}
     test_code=${project_test_code[$project]:-0}
     total_code=$((prod_code + test_code))
