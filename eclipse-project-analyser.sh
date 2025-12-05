@@ -70,7 +70,7 @@ get_feature_id() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -oP 'id="\K[^"]+' "$feature_xml" | head -1
+        grep -o 'id="[^"]*"' "$feature_xml" | head -1 | sed 's/id="//;s/"$//'
     else
         basename "$dir"
     fi
@@ -82,7 +82,7 @@ get_feature_version() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -oP 'version="\K[^"]+' "$feature_xml" | head -1
+        grep -o 'version="[^"]*"' "$feature_xml" | head -1 | sed 's/version="//;s/"$//'
     else
         echo ""
     fi
@@ -98,7 +98,7 @@ get_product_name() {
     local product_file="$1"
 
     if [[ -f "$product_file" ]]; then
-        grep -oP 'name="\K[^"]+' "$product_file" | head -1
+        grep -o 'name="[^"]*"' "$product_file" | head -1 | sed 's/name="//;s/"$//'
     else
         basename "$product_file" .product
     fi
@@ -109,7 +109,7 @@ get_product_id() {
     local product_file="$1"
 
     if [[ -f "$product_file" ]]; then
-        grep -oP 'id="\K[^"]+' "$product_file" | head -1
+        grep -o 'id="[^"]*"' "$product_file" | head -1 | sed 's/id="//;s/"$//'
     else
         echo ""
     fi
@@ -321,12 +321,12 @@ if [[ ${#plugins[@]} -gt 0 ]]; then
     echo '```' >> "$OUTPUT_FILE"
     for plugin_entry in "${plugins[@]}"; do
         IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
-        printf "%-60s %6d Java-Dateien\n" "$plugin_name" "$java_count" >> "$OUTPUT_FILE"
+        printf "% -60s %6d Java-Dateien\n" "$plugin_name" "$java_count" >> "$OUTPUT_FILE"
         total_java=$((total_java + java_count))
     done
     echo "" >> "$OUTPUT_FILE"
-    echo "================================================================" >> "$OUTPUT_FILE"
-    printf "%-60s %6d Java-Dateien\n" "GESAMT" "$total_java" >> "$OUTPUT_FILE"
+    echo "================================================================"
+    printf "% -60s %6d Java-Dateien\n" "GESAMT" "$total_java" >> "$OUTPUT_FILE"
     echo '```' >> "$OUTPUT_FILE"
 
     echo "" >> "$OUTPUT_FILE"
