@@ -156,7 +156,8 @@ echo "Searching recursively for Eclipse RCP projects..."
 echo ""
 
 # Temporary file for found markers
-MARKERS_FILE=$(mktemp)
+MARKERS_FILE=$(mktemp) || exit 1
+trap 'rm -f "$MARKERS_FILE"' EXIT
 
 # Use find with prune to efficiently skip ignored directories and locate markers
 find "$WORKSPACE_PATH" \
@@ -170,8 +171,8 @@ declare -a product_candidates
 
 # Parse the find results
 while IFS= read -r -d '' file_path; do
-    dir_path=$(dirname "$file_path")
-    file_name=$(basename "$file_path")
+    dir_path="${file_path%/*}"
+    file_name="${file_path##*/}"
 
     if [[ "$file_name" == "feature.xml" ]]; then
         feature_candidates["$dir_path"]=1
@@ -180,16 +181,14 @@ while IFS= read -r -d '' file_path; do
     elif [[ "$file_name" == "MANIFEST.MF" ]]; then
         # MANIFEST.MF is in META-INF, so project root is parent dir
         # Ensure we don't go up if it's not in META-INF (paranoid check)
-        if [[ "$(basename "$dir_path")" == "META-INF" ]]; then
-            project_root=$(dirname "$dir_path")
+        if [[ "${dir_path##*/}" == "META-INF" ]]; then
+            project_root="${dir_path%/*}"
             plugin_candidates["$project_root"]=1
         fi
     elif [[ "$file_name" == *.product ]]; then
         product_candidates+=("$file_path")
     fi
 done < "$MARKERS_FILE"
-
-rm "$MARKERS_FILE"
 
 # Sort keys for consistent output order (directories)
 mapfile -t sorted_features < <(printf "%s\n" "${!feature_candidates[@]}" | sort)
@@ -229,7 +228,7 @@ done
 mapfile -t sorted_products < <(printf "%s\n" "${product_candidates[@]}" | sort)
 
 for product_file in "${sorted_products[@]}"; do
-    product_dir=$(dirname "$product_file")
+    product_dir="${product_file%/*}"
     
     # Only report product if it's NOT in a directory already identified as a Feature or Plugin
     # (Matches original behavior where products inside projects are skipped by the loop structure)
