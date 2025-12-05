@@ -155,51 +155,92 @@ declare -A processed_dirs
 echo "Searching recursively for Eclipse RCP projects..."
 echo ""
 
-# Verwende find für rekursive Suche, schließe aber bestimmte Verzeichnisse aus
-while IFS= read -r -d '' dir; do
-    # Überspringe, wenn dieses Verzeichnis bereits verarbeitet wurde
-    if [[ -n "${processed_dirs[$dir]}" ]]; then
-        continue
+# Temporary file for found markers
+MARKERS_FILE=$(mktemp) || exit 1
+trap 'rm -f "$MARKERS_FILE"' EXIT
+
+# Use find with prune to efficiently skip ignored directories and locate markers
+find "$WORKSPACE_PATH" \
+    \( -name ".git" -o -name ".metadata" -o -name "bin" -o -name "target" -o -name "build" -o -name ".settings" -o -name "node_modules" -o -name ".svn" \) -prune \
+    -o \( -name "feature.xml" -o -name "plugin.xml" -o -name "MANIFEST.MF" -o -name "*.product" \) -print0 > "$MARKERS_FILE"
+
+# Arrays to store potential project roots
+declare -A feature_candidates
+declare -A plugin_candidates
+declare -a product_candidates
+
+# Parse the find results
+while IFS= read -r -d '' file_path; do
+    dir_path="${file_path%/*}"
+    file_name="${file_path##*/}"
+
+    if [[ "$file_name" == "feature.xml" ]]; then
+        feature_candidates["$dir_path"]=1
+    elif [[ "$file_name" == "plugin.xml" ]]; then
+        plugin_candidates["$dir_path"]=1
+    elif [[ "$file_name" == "MANIFEST.MF" ]]; then
+        # MANIFEST.MF is in META-INF, so project root is parent dir
+        # Ensure we don't go up if it's not in META-INF (paranoid check)
+        if [[ "${dir_path##*/}" == "META-INF" ]]; then
+            project_root="${dir_path%/*}"
+            plugin_candidates["$project_root"]=1
+        fi
+    elif [[ "$file_name" == *.product ]]; then
+        product_candidates+=("$file_path")
     fi
+done < "$MARKERS_FILE"
 
-    # Markiere Verzeichnis als verarbeitet
-    processed_dirs[$dir]=1
+# Sort keys for consistent output order (directories)
+mapfile -t sorted_features < <(printf "%s\n" "${!feature_candidates[@]}" | sort)
+mapfile -t sorted_plugins < <(printf "%s\n" "${!plugin_candidates[@]}" | sort)
 
-    # Prüfe Projekttyp mit Priorität: Feature > Plugin > Product
-    # Ein Verzeichnis wird nur einmal gezählt
-
-    # Feature-Projekte (höchste Priorität, da Features auch Plugin-Dateien haben können)
+# 1. Process Feature Projects
+for dir in "${sorted_features[@]}"; do
+    # Double check if it's a valid feature project (helper check)
     if is_feature_project "$dir"; then
         feature_id=$(get_feature_id "$dir")
         feature_version=$(get_feature_version "$dir")
         features+=("$feature_id|$feature_version|$dir")
         echo "  ✓ [Feature] $feature_id"
-    # Plugin-Projekte (nur wenn nicht bereits als Feature gezählt)
-    elif is_plugin_project "$dir"; then
+        processed_dirs["$dir"]=1
+    fi
+done
+
+# 2. Process Plugin Projects (if not already processed)
+for dir in "${sorted_plugins[@]}"; do
+    if [[ -n "${processed_dirs[$dir]}" ]]; then
+        continue
+    fi
+
+    # Double check if it's a valid plugin project
+    if is_plugin_project "$dir"; then
         plugin_name=$(get_plugin_name "$dir")
         plugin_version=$(get_plugin_version "$dir")
         java_count=$(count_java_files "$dir")
         plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
         echo "  ✓ [Plugin]  $plugin_name"
-    # Product-Projekte (nur wenn nicht bereits als Feature oder Plugin gezählt)
-    elif product_files_found=$(get_product_files "$dir") && [[ -n "$product_files_found" ]]; then
-        while IFS= read -r product_file; do
-            product_name=$(get_product_name "$product_file")
-            product_id=$(get_product_id "$product_file")
-            products+=("$product_name|$product_id|$product_file")
-            echo "  ✓ [Product] $product_name"
-        done <<< "$product_files_found"
+        processed_dirs["$dir"]=1
     fi
-done < <(find "$WORKSPACE_PATH" -type d \
-    ! -path "*/.git/*" \
-    ! -path "*/.metadata/*" \
-    ! -path "*/bin/*" \
-    ! -path "*/target/*" \
-    ! -path "*/build/*" \
-    ! -path "*/.settings/*" \
-    ! -path "*/node_modules/*" \
-    ! -path "*/.svn/*" \
-    -print0)
+done
+
+# 3. Process Product Definitions
+# Sort product files for consistent output
+mapfile -t sorted_products < <(printf "%s\n" "${product_candidates[@]}" | sort)
+
+for product_file in "${sorted_products[@]}"; do
+    product_dir="${product_file%/*}"
+    
+    # Only report product if it's NOT in a directory already identified as a Feature or Plugin
+    # (Matches original behavior where products inside projects are skipped by the loop structure)
+    if [[ -n "${processed_dirs[$product_dir]}" ]]; then
+        continue
+    fi
+
+    product_name=$(get_product_name "$product_file")
+    product_id=$(get_product_id "$product_file")
+    products+=("$product_name|$product_id|$product_file")
+    echo "  ✓ [Product] $product_name"
+done
 
 echo ""
 # Ergebnisse ausgeben (Output results)
