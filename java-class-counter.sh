@@ -39,12 +39,14 @@ count_lines() {
     local lines=$(wc -l < "$file" 2>/dev/null | awk '{print $1}' || echo "0")
 
     # Leerzeilen
-    local blank=$(grep -c "^[[:space:]]*$" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
+    local blank=$(grep -c "^[[:space:]]*$" "$file" 2>/dev/null || echo "0")
 
     # Kommentarzeilen
-    local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
-    local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
-    local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
+    # Note: This simple regex-based counting is an approximation.
+    # It does not fully handle inline comments, complex block comments, or strings containing comment markers.
+    local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null || echo "0")
+    local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null || echo "0")
+    local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null || echo "0")
     local comments=$((single_comments + multi_comments + comment_start))
 
     # Code-Zeilen

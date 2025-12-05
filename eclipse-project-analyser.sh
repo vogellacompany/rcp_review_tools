@@ -6,7 +6,7 @@
 # (Recursively analyzes Eclipse RCP projects and generates a Markdown overview)
 ################################################################################
 
-# Funktion: Verwendung anzeigen (Show usage)
+# Funktion: Verwendung anzeigen (Show usage) 
 show_usage() {    echo "Usage: $0 <workspace-path> [output-file]"
     echo ""
     echo "Arguments:"
@@ -70,7 +70,7 @@ get_feature_id() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -o 'id="[^"]*"' "$feature_xml" | head -1 | sed 's/id="//;s/"$//'
+        grep '<feature' "$feature_xml" | grep -o 'id="[^"]*"' | head -1 | sed 's/id="//;s/"$//'
     else
         basename "$dir"
     fi
@@ -82,7 +82,7 @@ get_feature_version() {
     local feature_xml="$dir/feature.xml"
 
     if [[ -f "$feature_xml" ]]; then
-        grep -o 'version="[^"]*"' "$feature_xml" | head -1 | sed 's/version="//;s/"$//'
+        grep '<feature' "$feature_xml" | grep -o 'version="[^"]*"' | head -1 | sed 's/version="//;s/"$//'
     else
         echo ""
     fi
@@ -124,7 +124,8 @@ WORKSPACE_PATH="$1"
 OUTPUT_FILE="${2:-eclipse_rcp_report.md}"
 
 # Workspace-Pfad validieren (Validate workspace path)
-if [[ ! -d "$WORKSPACE_PATH" ]]; then    echo "Error: Verzeichnis '$WORKSPACE_PATH' existiert nicht!"
+if [[ ! -d "$WORKSPACE_PATH" ]]; then
+    echo "Error: Directory '$WORKSPACE_PATH' does not exist!"
     exit 1
 fi
 
@@ -145,7 +146,7 @@ declare -a products
 declare -A processed_dirs
 
 # Workspace rekursiv durchsuchen (Recursively search workspace)
-echo "Durchsuche rekursiv nach Eclipse RCP Projekten..."
+echo "Searching recursively for Eclipse RCP projects..."
 echo ""
 
 # Verwende find für rekursive Suche, schließe aber bestimmte Verzeichnisse aus (Use find for recursive search, but exclude certain directories)
@@ -160,7 +161,6 @@ while IFS= read -r -d '' dir; do
 
     # Prüfe Projekttyp mit Priorität: Feature > Plugin > Product
     # Ein Verzeichnis wird nur einmal gezählt (Check project type with priority: Feature > Plugin > Product. A directory is counted only once)
-    project_counted=false
 
     # Feature-Projekte (höchste Priorität, da Features auch Plugin-Dateien haben können) (Feature projects - highest priority)
     if is_feature_project "$dir"; then
@@ -168,21 +168,15 @@ while IFS= read -r -d '' dir; do
         feature_version=$(get_feature_version "$dir")
         features+=("$feature_id|$feature_version|$dir")
         echo "  ✓ [Feature] $feature_id"
-        project_counted=true
-    fi
-
     # Plugin-Projekte (nur wenn nicht bereits als Feature gezählt) (Plugin projects - only if not already counted as feature)
-    if [[ "$project_counted" == false ]] && is_plugin_project "$dir"; then
+    elif is_plugin_project "$dir"; then
         plugin_name=$(get_plugin_name "$dir")
         plugin_version=$(get_plugin_version "$dir")
         java_count=$(count_java_files "$dir")
         plugins+=("$plugin_name|$plugin_version|$java_count|$dir")
         echo "  ✓ [Plugin]  $plugin_name"
-        project_counted=true
-    fi
-
     # Product-Projekte (nur wenn nicht bereits als Feature oder Plugin gezählt) (Product projects - only if not already counted as feature or plugin)
-    if [[ "$project_counted" == false ]] && is_product_project "$dir"; then
+    elif is_product_project "$dir"; then
         while IFS= read -r product_file; do
             product_name=$(get_product_name "$product_file")
             product_id=$(get_product_id "$product_file")
@@ -204,52 +198,50 @@ done < <(find "$WORKSPACE_PATH" -type d \
 echo ""
 # Ergebnisse ausgeben (Output results)
 echo "==================================================="
-echo "Gefundene Artefakte:"
-echo "  • ${#plugins[@]} Plugin-Projekte"
-echo "  • ${#features[@]} Feature-Projekte"
-echo "  • ${#products[@]} Product-Definitionen"
+echo "Found artifacts:"
+echo "  • ${#plugins[@]} Plugin Projects"
+echo "  • ${#features[@]} Feature Projects"
+echo "  • ${#products[@]} Product Definitions"
 echo "==================================================="
 echo ""
 
 # Markdown-Report generieren (Generate Markdown report)
-echo "Generiere Markdown-Report..."
+echo "Generating Markdown Report..."
 cat > "$OUTPUT_FILE" << 'EOF'
 # Eclipse RCP Project Analysis Report
 EOF
 
-echo "**Analysedatum:** $(date '+%Y-%m-%d %H:%M:%S')" >> "$OUTPUT_FILE"
+echo "**Analysis Date:** $(date '+%Y-%m-%d %H:%M:%S')" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 echo "**Workspace:** \`$WORKSPACE_PATH\`" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 
 # Zusammenfassung (Summary)
 cat >> "$OUTPUT_FILE" << EOF
-## 📊 Zusammenfassung
-|                       Typ                       |                    Anzahl                    |
+## 📊 Summary
+|                       Type                       |                    Count                    |
 |:----------------------------------------------:|:----------------------------------------------:|
-| Plugin-Projekte                                | ${#plugins[@]} |
-| Feature-Projekte                               | ${#features[@]} |
-| Product-Definitionen                           | ${#products[@]} |
+| Plugin Projects                                | ${#plugins[@]} |
+| Feature Projects                               | ${#features[@]} |
+| Product Definitions                            | ${#products[@]} |
 EOF
 
 # Plugin-Projekte auflisten (List plugin projects)
 cat >> "$OUTPUT_FILE" << 'EOF'
-## 🔌 Plugin-Projekte
+## 🔌 Plugin Projects
 EOF
 if [[ ${#plugins[@]} -eq 0 ]]; then
-    echo "_Keine Plugin-Projekte gefunden._" >> "$OUTPUT_FILE"
+    echo "_No plugin projects found._" >> "$OUTPUT_FILE"
 else
-    # Gleich breite Spalten für bessere Lesbarkeit (60 Zeichen pro Spalte)
-    echo "|     #     |                                                          Plugin Name                                                           |                                                          Version                                                         |                                                          Java-Dateien                                                          |" >> "$OUTPUT_FILE"
-    echo "|:---------:|:------------------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------------------:|" >> "$OUTPUT_FILE"
+    echo "| # | Plugin Name | Version | Java Files |" >> "$OUTPUT_FILE"
+    echo "|:--:|:---|:---|:---:|" >> "$OUTPUT_FILE"
 
     counter=1
     for plugin_entry in "${plugins[@]}"; do
         IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
         version_display="${plugin_version:-n/a}"
 
-        # Formatierung mit gleich breiten Spalten (60 Zeichen)
-        printf "| %9d | %-60s | %-56s | %56d |\n" \
+        printf "| %d | %s | %s | %d |\n" \
             "$counter" \
             "\`$plugin_name\`" \
             "$version_display" \
@@ -261,22 +253,20 @@ echo "" >> "$OUTPUT_FILE"
 
 # Feature-Projekte auflisten (List feature projects)
 cat >> "$OUTPUT_FILE" << 'EOF'
-## 📦 Feature-Projekte
+## 📦 Feature Projects
 EOF
 if [[ ${#features[@]} -eq 0 ]]; then
-    echo "_Keine Feature-Projekte gefunden._" >> "$OUTPUT_FILE"
+    echo "_No feature projects found._" >> "$OUTPUT_FILE"
 else
-    # Gleich breite Spalten für bessere Lesbarkeit (90 Zeichen pro Spalte)
-    echo "|     #     |                                                                                      Feature ID                                                                                       |                                                                                      Version                                                                                      |" >> "$OUTPUT_FILE"
-    echo "|:---------:|:-------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------:|" >> "$OUTPUT_FILE"
+    echo "| # | Feature ID | Version |" >> "$OUTPUT_FILE"
+    echo "|:--:|:---|:---|" >> "$OUTPUT_FILE"
 
     counter=1
     for feature_entry in "${features[@]}"; do
         IFS='|' read -r feature_id feature_version feature_path <<< "$feature_entry"
         version_display="${feature_version:-n/a}"
 
-        # Formatierung mit gleich breiten Spalten (90 Zeichen)
-        printf "| %9d | %-85s | %-85s |\n" \
+        printf "| %d | %s | %s |\n" \
             "$counter" \
             "\`$feature_id\`" \
             "$version_display" >> "$OUTPUT_FILE"
@@ -287,22 +277,20 @@ echo "" >> "$OUTPUT_FILE"
 
 # Product-Definitionen auflisten (List product definitions)
 cat >> "$OUTPUT_FILE" << 'EOF'
-## 🚀 Product-Definitionen
+## 🚀 Product Definitions
 EOF
 if [[ ${#products[@]} -eq 0 ]]; then
-    echo "_Keine Product-Definitionen gefunden._" >> "$OUTPUT_FILE"
+    echo "_No product definitions found._" >> "$OUTPUT_FILE"
 else
-    # Gleich breite Spalten für bessere Lesbarkeit (90 Zeichen pro Spalte)
-    echo "|     #     |                                                                                      Product Name                                                                                     |                                                                                       Product ID                                                                                      |" >> "$OUTPUT_FILE"
-    echo "|:---------:|:-------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------:|" >> "$OUTPUT_FILE"
+    echo "| # | Product Name | Product ID |" >> "$OUTPUT_FILE"
+    echo "|:--:|:---|:---|" >> "$OUTPUT_FILE"
 
     counter=1
     for product_entry in "${products[@]}"; do
         IFS='|' read -r product_name product_id product_file <<< "$product_entry"
         id_display="${product_id:-n/a}"
 
-        # Formatierung mit gleich breiten Spalten (90 Zeichen)
-        printf "| %9d | %-85s | %-85s |\n" \
+        printf "| %d | %s | %s |\n" \
             "$counter" \
             "\`$product_name\`" \
             "\`$id_display\`" >> "$OUTPUT_FILE"
@@ -313,36 +301,36 @@ echo "" >> "$OUTPUT_FILE"
 
 # Statistiken (Statistics)
 cat >> "$OUTPUT_FILE" << EOF
-## 📈 Statistiken
-### Java-Dateien nach Plugin
+## 📈 Statistics
+### Java Files by Plugin
 EOF
 if [[ ${#plugins[@]} -gt 0 ]]; then
     total_java=0
     echo '```' >> "$OUTPUT_FILE"
     for plugin_entry in "${plugins[@]}"; do
         IFS='|' read -r plugin_name plugin_version java_count plugin_path <<< "$plugin_entry"
-        printf "% -60s %6d Java-Dateien\n" "$plugin_name" "$java_count" >> "$OUTPUT_FILE"
+        printf "% -60s %6d Java Files\n" "$plugin_name" "$java_count" >> "$OUTPUT_FILE"
         total_java=$((total_java + java_count))
     done
     echo "" >> "$OUTPUT_FILE"
     echo "================================================================"
-    printf "% -60s %6d Java-Dateien\n" "GESAMT" "$total_java" >> "$OUTPUT_FILE"
+    printf "% -60s %6d Java Files\n" "TOTAL" "$total_java" >> "$OUTPUT_FILE"
     echo '```' >> "$OUTPUT_FILE"
 
     echo "" >> "$OUTPUT_FILE"
-    echo "### Verteilung" >> "$OUTPUT_FILE"
+    echo "### Distribution" >> "$OUTPUT_FILE"
     echo "" >> "$OUTPUT_FILE"
-    echo "- **Durchschnitt:** $((total_java / ${#plugins[@]})) Java-Dateien pro Plugin" >> "$OUTPUT_FILE"
-    echo "- **Gesamt:** $total_java Java-Dateien in ${#plugins[@]} Plugins" >> "$OUTPUT_FILE"
+    echo "- **Average:** $((total_java / ${#plugins[@]})) Java files per plugin" >> "$OUTPUT_FILE"
+    echo "- **Total:** $total_java Java files in ${#plugins[@]} plugins" >> "$OUTPUT_FILE"
 else
-    echo "_Keine Statistiken verfügbar._" >> "$OUTPUT_FILE"
+    echo "_No statistics available._" >> "$OUTPUT_FILE"
 fi
 echo "" >> "$OUTPUT_FILE"
 
 # Verzeichnisstruktur (Directory structure)
 cat >> "$OUTPUT_FILE" << 'EOF'
-## 📁 Verzeichnisstruktur
-### Nach Projekttyp gruppiert
+## 📁 Directory Structure
+### Grouped by Project Type
 EOF
 echo '```' >> "$OUTPUT_FILE"
 if [[ ${#plugins[@]} -gt 0 ]]; then
@@ -375,10 +363,10 @@ echo '```' >> "$OUTPUT_FILE"
 
 echo "" >> "$OUTPUT_FILE"
 echo "---" >> "$OUTPUT_FILE"
-echo "_Generiert mit Eclipse RCP Analyzer am $(date '+%Y-%m-%d %H:%M:%S')_" >> "$OUTPUT_FILE"
+echo "_Generated with Eclipse RCP Analyzer on $(date '+%Y-%m-%d %H:%M:%S')_" >> "$OUTPUT_FILE"
 
-echo "✓ Report erfolgreich erstellt!"
+echo "✓ Report successfully generated!"
 echo ""
-echo "Datei: $OUTPUT_FILE"
-echo "Tipp: Öffnen Sie die Datei mit einem Markdown-Viewer, GitHub oder GitLab."
+echo "File: $OUTPUT_FILE"
+echo "Tip: Open the file with a Markdown viewer, GitHub, or GitLab."
 echo ""
