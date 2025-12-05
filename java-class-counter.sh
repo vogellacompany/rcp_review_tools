@@ -37,15 +37,15 @@ count_lines() {
     fi
 
     # Gesamtzeilen
-    local lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+    local lines=$(wc -l < "$file" 2>/dev/null | awk '{print $1}' || echo "0")
 
     # Leerzeilen
-    local blank=$(grep -c "^[[:space:]]*$" "$file" 2>/dev/null || echo "0")
+    local blank=$(grep -c "^[[:space:]]*$" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
 
     # Kommentarzeilen
-    local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null || echo "0")
-    local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null || echo "0")
-    local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null || echo "0")
+    local single_comments=$(grep -c "^[[:space:]]*\/\/" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
+    local multi_comments=$(grep -c "^[[:space:]]*\*" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
+    local comment_start=$(grep -c "^[[:space:]]*\/\*" "$file" 2>/dev/null | awk '{print $1}' || echo "0")
     local comments=$((single_comments + multi_comments + comment_start))
 
     # Code-Zeilen
@@ -58,7 +58,9 @@ count_lines() {
     result[code]=$code
     result[comment]=$comments
     result[blank]=$blank
-}# Assoziative Arrays für Projektzählung (Associative arrays for project counting)
+}
+
+# Assoziative Arrays für Projektzählung (Associative arrays for project counting)
 declare -A projects
 declare -A project_prod_code
 declare -A project_test_code
@@ -118,8 +120,9 @@ while IFS= read -r file; do
             TOTAL_PROD_CODE=$((TOTAL_PROD_CODE + line_count[code]))
             TOTAL_PROD_FILES=$((TOTAL_PROD_FILES + 1))
         fi
-        fi
-    done < <(find "$SEARCH_DIR" -type f -name "*.java" 2>/dev/null)# Prüfen ob Java-Dateien gefunden wurden (Check if Java files were found)
+    done < <(find "$SEARCH_DIR" -type f -name "*.java" 2>/dev/null)
+
+# Prüfen ob Java-Dateien gefunden wurden (Check if Java files were found)
 if [ ${#projects[@]} -eq 0 ]; then
     echo -e "${YELLOW}Keine Java-Dateien gefunden!${NC}" # No Java files found!
     exit 0
