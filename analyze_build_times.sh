@@ -17,12 +17,22 @@ fi
 printf "% -10s | % -12s | %s\n" "Time (s)" "Original" "Component"
 echo "--------------------------------------------------------------------------------"
 
-# Awk script defined as a variable
+# Awk script to parse, clean, and convert times
 AWK_SCRIPT='
-BEGIN { FS="|"; OFS="|" }
-{
-    name = $1
-    time_str = $2
+/SUCCESS [[]/ {
+    # Handle CRLF if present
+    sub(/\r$/, "")
+
+    # Replicate sed logic: s/^[[INFO]] //; s/[]]$//; s/ (.+\.)?SUCCESS [[]/|/
+    line = $0
+    sub(/^[[INFO]] /, "", line)
+    sub(/[]]$/, "", line)
+    sub(/ (.+\.)?SUCCESS [[]/, "|", line)
+
+    # Split into name and time string
+    split(line, fields, "|")
+    name = fields[1]
+    time_str = fields[2]
     
     # Trim leading/trailing whitespace
     gsub(/^ +| +$/, "", name)
@@ -43,15 +53,13 @@ BEGIN { FS="|"; OFS="|" }
         seconds = clean_str
     }
     
-    # Output: seconds|original_time|name
+    # Output: seconds|original_time|name for sorting
     printf "%.3f|%s|%s\n", seconds, time_str, name
 }
 '
 
 # Process file
-# Use tr -d '\r' to handle Windows CRLF line endings
-tr -d '\r' < "$FILE_PATH" | grep "SUCCESS \[" |
- sed -E 's/^\[INFO\] //; s/\]$//; s/ (\.+ )?SUCCESS \[/|/' |
- awk "$AWK_SCRIPT" |
+# Consolidates tr, grep, sed, and first awk into one awk process.
+awk "$AWK_SCRIPT" "$FILE_PATH" |
  sort -t "|" -k1,1rn |
  awk -F "|" '{ printf "% -10s | % -12s | %s\n", $1, $2, $3 }'
