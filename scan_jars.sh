@@ -22,9 +22,9 @@ echo "Searching for lib/libs folders (excluding target, bin, .git)..."
 # Accepts optional target directory argument, defaults to current directory (.)
 SEARCH_DIR="${1:-.}"
 
-find "$SEARCH_DIR" -type d \( -name "target" -o -name "bin" -o -name ".git" \) -prune -o -type d \( -name "lib" -o -name "libs" \) -print > "$FOUND_LIB_DIRS"
+find "$SEARCH_DIR" -type d \( -name "target" -o -name "bin" -o -name ".git" \) -prune -o -type d \( -name "lib" -o -name "libs" \) -print0 > "$FOUND_LIB_DIRS"
 
-while IFS= read -r lib_dir; do
+while IFS= read -r -d '' lib_dir; do
     # The plugin directory is the parent of the lib/libs directory
     plugin_dir=$(dirname "$lib_dir")
     plugin_name=$(basename "$plugin_dir")
@@ -32,10 +32,11 @@ while IFS= read -r lib_dir; do
     # Find jar files in this specific lib directory (non-recursive to avoid deep nesting issues if any, usually libs are flat)
     # Using separate find execution to safely handle filenames with spaces if needed, though simpler loop works for standard jars
     
-    # Check if any jars exist
-    jar_count=$(find "$lib_dir" -maxdepth 1 -name "*.jar" | wc -l)
+    # Find all jars in the directory first into an array
+    mapfile -d '' jars < <(find "$lib_dir" -maxdepth 1 -name "*.jar" -print0)
     
-    if [ "$jar_count" -gt 0 ]; then
+    # Check if the array is not empty (mapfile might create an empty element)
+    if [ "${#jars[@]}" -gt 0 ] && [ -n "${jars[0]}" ]; then
         echo "## Plugin: $plugin_name" >> "$REPORT_FILE"
         echo "**Location:** \`$plugin_dir\`" >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
@@ -43,7 +44,7 @@ while IFS= read -r lib_dir; do
         echo "|---|" >> "$REPORT_FILE"
 
         # We loop through jars to add them to report and the global list
-        find "$lib_dir" -maxdepth 1 -name "*.jar" -print0 | while IFS= read -r -d '' jar_path; do
+        for jar_path in "${jars[@]}"; do
             jar_name=$(basename "$jar_path")
             echo "| $jar_name |" >> "$REPORT_FILE"
             echo "$jar_name" >> "$TEMP_JAR_LIST"
