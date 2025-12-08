@@ -2,28 +2,33 @@
 import sys
 import re
 
+# Pre-compile regexes for performance
+RE_MM_SS_MIN = re.compile(r'(\d+):(\d+(?:\.\d+)?)\s*min')
+RE_FLOAT_MIN = re.compile(r'(\d+(?:\.\d+)?)\s*min')
+RE_FLOAT_S = re.compile(r'(\d+(?:\.\d+)?)\s*s')
+
 def parse_time(time_str):
     """Parses a time string like '5.990 s' or '01:50 min' or '1.5 min' into seconds."""
     time_str = time_str.strip()
 
     # Try to match 'MM:SS min' format, e.g., '01:50 min'
-    match = re.fullmatch(r'(\d+):(\d+(?:\.\d+)?)\s*min', time_str)
+    match = RE_MM_SS_MIN.fullmatch(time_str)
     if match:
         minutes = float(match.group(1))
         seconds = float(match.group(2))
         return minutes * 60 + seconds
 
     # Try to match 'X.Y min' format, e.g., '1.5 min'
-    match = re.fullmatch(r'(\d+(?:\.\d+)?)\s*min', time_str)
+    match = RE_FLOAT_MIN.fullmatch(time_str)
     if match:
         return float(match.group(1)) * 60
 
     # Try to match 'X.Y s' format, e.g., '5.990 s'
-    match = re.fullmatch(r'(\d+(?:\.\d+)?)\s*s', time_str)
+    match = RE_FLOAT_S.fullmatch(time_str)
     if match:
         return float(match.group(1))
 
-    return 0.0
+    raise ValueError(f"Could not parse time string: '{time_str}'")
 
 def main():
     if len(sys.argv) != 2:
