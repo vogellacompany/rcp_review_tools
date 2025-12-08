@@ -35,8 +35,8 @@ while IFS= read -r -d '' lib_dir; do
     # Find all jars in the directory first into an array
     mapfile -d '' jars < <(find "$lib_dir" -maxdepth 1 -name "*.jar" -print0)
     
-    # Check if the array is not empty (mapfile might create an empty element)
-    if [ "${#jars[@]}" -gt 0 ] && [ -n "${jars[0]}" ]; then
+    # Check if any jars were found
+    if [ "${#jars[@]}" -gt 0 ]; then
         echo "## Plugin: $plugin_name" >> "$REPORT_FILE"
         echo "**Location:** \`$plugin_dir\`" >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
