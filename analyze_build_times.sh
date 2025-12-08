@@ -19,15 +19,15 @@ echo "--------------------------------------------------------------------------
 
 # Awk script to parse, clean, and convert times
 AWK_SCRIPT='
-/SUCCESS [[]/ {
+/SUCCESS \[ / { 
     # Handle CRLF if present
     sub(/\r$/, "")
 
-    # Replicate sed logic: s/^[[INFO]] //; s/[]]$//; s/ (.+\.)?SUCCESS [[]/|/
+    # Replicate sed logic: s/^\ \[INFO\] //; s/\]$//; s/ (.+\.)?SUCCESS \[/|/
     line = $0
-    sub(/^[[INFO]] /, "", line)
-    sub(/[]]$/, "", line)
-    sub(/ (.+\.)?SUCCESS [[]/, "|", line)
+    sub(/^\ \[INFO\] /, "", line)
+    sub(/\ ]$/, "", line)
+    sub(/ (.+\.)?SUCCESS \[/, "|", line)
 
     # Split into name and time string
     split(line, fields, "|")
