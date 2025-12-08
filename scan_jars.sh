@@ -46,7 +46,7 @@ while IFS= read -r -d '' lib_dir; do
         # We loop through jars to add them to report and the global list
         for jar_path in "${jars[@]}"; do
             jar_name=$(basename "$jar_path")
-            printf "| %s |\n" "$jar_name" >> "$REPORT_FILE"
+            printf "| %s |\n" "${jar_name//$'\n'/ }" >> "$REPORT_FILE"
             printf "%s\n" "$jar_name" >> "$TEMP_JAR_LIST"
         done
         
