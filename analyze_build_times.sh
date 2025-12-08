@@ -16,9 +16,8 @@ fi
 printf "% -10s | % -12s | %s\n" "Time (s)" "Original" "Component"
 echo "--------------------------------------------------------------------------------"
 
-# Create temporary awk script
-AWK_SCRIPT=$(mktemp)
-cat << 'EOF' > "$AWK_SCRIPT"
+# Awk script defined as a variable
+AWK_SCRIPT='
 BEGIN { FS="|"; OFS="|" }
 {
     name = $1
@@ -48,14 +47,13 @@ BEGIN { FS="|"; OFS="|" }
     # Output: seconds|original_time|name
     printf "%.3f|%s|%s\n", seconds, time_str, name
 }
-EOF
+'
 
 # Process file
 # Use tr -d '\r' to handle Windows CRLF line endings
-cat "$FILE_PATH" | tr -d '\r' | grep "SUCCESS \[" |
- sed -E 's/^\ \[INFO\] //; s/\]$//; s/ (\.+ )?SUCCESS \[/|/' |
- awk -f "$AWK_SCRIPT" |
+tr -d '\r' < "$FILE_PATH" | grep "SUCCESS \[" |
+ sed -E 's/^\[INFO\] //; s/\]$//; s/ (\.+ )?SUCCESS \[/|/' |
+ awk "$AWK_SCRIPT" |
  sort -t "|" -k1,1rn |
  awk -F "|" '{ printf "% -10s | % -12s | %s\n", $1, $2, $3 }'
 
-rm -f "$AWK_SCRIPT"
