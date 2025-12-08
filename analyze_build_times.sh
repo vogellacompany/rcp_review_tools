@@ -1,14 +1,15 @@
 #!/bin/bash
+set -euo pipefail
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <path_to_build_output_file>"
+    echo "Usage: $0 <path_to_build_output_file>" >&2
     exit 1
 fi
 
 FILE_PATH="$1"
 
 if [ ! -f "$FILE_PATH" ]; then
-    echo "Error: File '$FILE_PATH' not found."
+    echo "Error: File '$FILE_PATH' not found." >&2
     exit 1
 fi
 
@@ -28,19 +29,17 @@ BEGIN { FS="|"; OFS="|" }
     gsub(/^ +| +$/, "", time_str)
     
     seconds = 0
+    clean_str = time_str
     
-    if (index(time_str, "min") > 0) {
+    # sub() returns 1 on success, allowing us to combine check and substitution
+    if (sub(/ min$/, "", clean_str)) {
         # Format: 01:50 min
-        clean_str = time_str
-        gsub(" min", "", clean_str)
         split(clean_str, parts, ":")
         if (length(parts) == 2) {
             seconds = parts[1] * 60 + parts[2]
         }
-    } else if (index(time_str, "s") > 0) {
+    } else if (sub(/ s$/, "", clean_str)) {
         # Format: 5.990 s
-        clean_str = time_str
-        gsub(" s", "", clean_str)
         seconds = clean_str
     }
     
@@ -56,4 +55,3 @@ tr -d '\r' < "$FILE_PATH" | grep "SUCCESS \[" |
  awk "$AWK_SCRIPT" |
  sort -t "|" -k1,1rn |
  awk -F "|" '{ printf "% -10s | % -12s | %s\n", $1, $2, $3 }'
-
