@@ -42,13 +42,50 @@ def main():
     file_path = args.file_path
     
     try:
+        build_times = []
+        # Regex to match lines like:
+        # [INFO] de.ruv.ruvconn.all.releng .......................... SUCCESS [  5.419 s]
+        # [INFO] de.ruv.ruvconn.basis.common.model .................. SUCCESS [01:02 min]
+        line_regex = re.compile(r'^\[INFO\]\s+(.+?)\s+\.{3,}\s+(\w+)\s+\[(.+?)\]$')
+
         with open(file_path, 'r') as f:
             for line in f:
-                # Placeholder for actual processing logic, as it was not provided in the snippets.
-                # The script would likely parse lines for build times and other metrics here.
-                pass
+                line = line.strip()
+                match = line_regex.match(line)
+                if match:
+                    module_name = match.group(1)
+                    status = match.group(2)
+                    time_str = match.group(3)
+                    
+                    try:
+                        seconds = parse_time(time_str)
+                        build_times.append({
+                            'name': module_name,
+                            'status': status,
+                            'time_str': time_str,
+                            'seconds': seconds
+                        })
+                    except ValueError:
+                        # Might match a line that isn't a time, though the regex is fairly specific
+                        continue
+
+        if not build_times:
+            print(f"No build time information found in '{file_path}'.", file=sys.stderr)
+            sys.exit(0)
+
+        # Sort by duration descending
+        build_times.sort(key=lambda x: x['seconds'], reverse=True)
+
+        print(f"{'Module':<60} | {'Status':<10} | {'Time'}")
+        print("-" * 90)
         
-        print(f"Successfully processed {file_path}") # This line might change once the actual logic is added
+        total_seconds = 0
+        for entry in build_times:
+            total_seconds += entry['seconds']
+            print(f"{entry['name']:<60} | {entry['status']:<10} | {entry['time_str']}")
+
+        print("-" * 90)
+        print(f"Total time: {total_seconds:.2f} s ({total_seconds/60:.2f} min)")
 
     except FileNotFoundError:
         print(f"Error: File '{file_path}' not found.", file=sys.stderr)

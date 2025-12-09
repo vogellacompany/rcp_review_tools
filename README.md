@@ -60,6 +60,54 @@ Recursively finds `pom.xml` files and comments out modules ending in `.feature`.
     *   **Apply Mode:** Use `--apply` to actually modify the `pom.xml` files.
     *   Comments out `<module>...feature</module>` lines.
 
+### 6. Analyze Build Times (`analyze_build_times.py`)
+
+Analyzes build times from a build output file.
+
+*   **Purpose:** To extract and analyze timing information from build logs to identify performance bottlenecks.
+*   **Usage:** `python3 analyze_build_times.py <file_path>`
+*   **Key Features:**
+    *   Parses various time formats (e.g., "5.990 s", "01:50 min", "1.5 min").
+    *   Takes a build output file as input.
+
+### 7. Eclipse Project Analyzer (`eclipse-project-analyser.sh`)
+
+Recursively analyzes Eclipse RCP projects (plugins, features, products) within a given workspace path and generates a Markdown report.
+
+*   **Purpose:** To get a comprehensive overview of an Eclipse RCP workspace, including project types, versions, and code statistics.
+*   **Usage:** `./eclipse-project-analyser.sh <workspace-path> [output-file]`
+*   **Key Features:**
+    *   Identifies plugin projects (`META-INF/MANIFEST.MF`, `plugin.xml`).
+    *   Identifies feature projects (`feature.xml`).
+    *   Identifies product definitions (`.product` files).
+    *   Extracts names, versions, and counts Java files.
+    *   Generates a detailed Markdown report with summaries, project lists, statistics, and a directory structure.
+    *   Ignores common build/version control directories (`.git`, `target`, `bin`, etc.).
+
+### 8. Java Class Counter (`java-class-counter.sh`)
+
+Counts lines of Java code, separating production code from test code, and provides statistics per project and overall.
+
+*   **Purpose:** To get a detailed breakdown of Java code lines, distinguishing between production and test code, and identifying code size per project.
+*   **Usage:** `./java-class-counter.sh [directory]`
+*   **Key Features:**
+    *   Distinguishes between production and test code based on file path (e.g., `test/`, `tests/`).
+    *   Counts total lines, code lines, blank lines, and comment lines.
+    *   Provides statistics for each detected project.
+    *   Calculates a "Test-Code-Ratio" (Test-Lines / Prod-Lines).
+
+### 9. Scan JARs (`scan_jars.sh`)
+
+Scans for `.jar` files within `lib` or `libs` directories and generates a Markdown report.
+
+*   **Purpose:** To audit third-party dependencies packaged as JARs within projects, identify their locations, and get a global overview of unique JARs and their usage frequency.
+*   **Usage:** `./scan_jars.sh [directory]`
+*   **Key Features:**
+    *   Recursively searches for `lib` or `libs` directories, excluding common build/version control directories.
+    *   Generates a Markdown report (`jar_dependencies_report.md`).
+    *   Lists JAR files found within each identified plugin's `lib`/`libs` directory.
+    *   Provides a global summary of unique JARs and their occurrence count.
+
 ## Compatibility
 
 These scripts are written in Bash and are compatible with:
@@ -70,5 +118,6 @@ These scripts are written in Bash and are compatible with:
 ## Requirements
 
 *   **Bash 4.0+**
+*   **Python 3** (Required for `analyze_build_times.py`)
 *   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
 *   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
