@@ -17,7 +17,7 @@ printf "%-60s %-50s %s\n" "Project" "Artifact" "Size"
 printf "%s\n" "----------------------------------------------------------------------------------------------------------------------------------"
 
 # Find all 'target' directories which usually contain the build output
-find "$SEARCH_DIR" -type d -name "target" | sort | while read -r target_dir; do
+find "$SEARCH_DIR" -type d -name "target" -print0 | sort -z | while IFS= read -r -d '' target_dir; do
     project_path=$(dirname "$target_dir")
     project_name=$(basename "$project_path")
     

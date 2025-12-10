@@ -118,6 +118,7 @@ Recursively searches all `MANIFEST.MF` files for the usage of a certain library 
     *   Parses multi-line `MANIFEST.MF` headers correctly.
     *   Searches both `Require-Bundle` and `Import-Package`.
     *   Highlights the matching entry in the output.
+    *   **Case-insensitive:** The search is case-insensitive.
     *   Works on Linux and Windows.
 
 ## Compatibility
