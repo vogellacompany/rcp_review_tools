@@ -108,6 +108,18 @@ Scans for `.jar` files within `lib` or `libs` directories and generates a Markdo
     *   Lists JAR files found within each identified plugin's `lib`/`libs` directory.
     *   Provides a global summary of unique JARs and their occurrence count.
 
+### 10. Search Manifest Usage (`search_manifest_usage.sh`)
+
+Recursively searches all `MANIFEST.MF` files for the usage of a certain library (e.g., `riena`) in `Require-Bundle` and `Import-Package` headers.
+
+*   **Purpose:** To find where a specific library or package is referenced across all Eclipse plugins in a repository.
+*   **Usage:** `./search_manifest_usage.sh <search-directory> <library-name>`
+*   **Key Features:**
+    *   Parses multi-line `MANIFEST.MF` headers correctly.
+    *   Searches both `Require-Bundle` and `Import-Package`.
+    *   Highlights the matching entry in the output.
+    *   Works on Linux and Windows.
+
 ## Compatibility
 
 These scripts are written in Bash and are compatible with:
