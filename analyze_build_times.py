@@ -48,7 +48,7 @@ def main():
         # [INFO] de.ruv.ruvconn.basis.common.model .................. SUCCESS [01:02 min]
         line_regex = re.compile(r'^\[INFO\]\s+(.+?)\s+\.{3,}\s+(\w+)\s+\[(.+?)\]$')
 
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 match = line_regex.match(line)
