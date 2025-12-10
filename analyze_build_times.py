@@ -10,6 +10,11 @@ import argparse
 # - Unit: \s*(min|s)
 RE_TIME = re.compile(r'(?:(\d+):)?(\d+(?:\.\d+)?)\s*(min|s)')
 
+# Regex to match lines like:
+# [INFO] de.ruv.ruvconn.all.releng .......................... SUCCESS [  5.419 s]
+# [INFO] de.ruv.ruvconn.basis.common.model .................. SUCCESS [01:02 min]
+LINE_REGEX = re.compile(r'^\[INFO\]\s+(.+?)\s+\.{3,}\s+(\w+)\s+\[(.+?)\]$')
+
 def parse_time(time_str):
     """Parses a time string like '5.990 s' or '01:50 min' or '1.5 min' into seconds."""
     time_str = time_str.strip()
@@ -43,15 +48,11 @@ def main():
     
     try:
         build_times = []
-        # Regex to match lines like:
-        # [INFO] de.ruv.ruvconn.all.releng .......................... SUCCESS [  5.419 s]
-        # [INFO] de.ruv.ruvconn.basis.common.model .................. SUCCESS [01:02 min]
-        line_regex = re.compile(r'^\[INFO\]\s+(.+?)\s+\.{3,}\s+(\w+)\s+\[(.+?)\]$')
-
+        
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                match = line_regex.match(line)
+                match = LINE_REGEX.match(line)
                 if match:
                     module_name = match.group(1)
                     status = match.group(2)
