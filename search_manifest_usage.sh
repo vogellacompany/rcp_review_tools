@@ -3,7 +3,7 @@
 # Finds entries in Require-Bundle and Import-Package headers.
 # Works on Linux and Windows (Git Bash, WSL, Cygwin).
 
-set -e
+set -euo pipefail
 
 # Color codes
 RED='\033[0;31m'
@@ -46,7 +46,7 @@ trap "rm -f $TEMP_RESULTS" EXIT
 
 # Find and process MANIFEST.MF files
 # Using process substitution or temp file to handle while loop scope
-find "$SEARCH_DIR" -type f \( -iname "MANIFEST.MF" -o -iname "manifest.mf" \) | while read -r manifest_file; do
+find "$SEARCH_DIR" -type f \( -iname "MANIFEST.MF" -o -iname "manifest.mf" \) -print0 | while IFS= read -r -d '' manifest_file; do
     
     # We use awk to parse the multi-line headers and check for the search term.
     # It prints the match type and the matching line content.

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Script to analyze Maven Tycho build artifacts and their sizes.
 # Usage: ./analyze_tycho_artifact_sizes.sh [directory]
@@ -10,9 +11,9 @@ if [ ! -d "$SEARCH_DIR" ]; then
     exit 1
 fi
 
-echo "Analyzing Tycho build artifacts in: $(realpath "$SEARCH_DIR")"
+echo "Analyzing Tycho build artifacts in: $SEARCH_DIR"
 echo ""
-printf "% -60s % -50s %s\n" "Project" "Artifact" "Size"
+printf "%-60s %-50s %s\n" "Project" "Artifact" "Size"
 printf "%s\n" "----------------------------------------------------------------------------------------------------------------------------------"
 
 # Find all 'target' directories which usually contain the build output
@@ -33,6 +34,6 @@ find "$SEARCH_DIR" -type d -name "target" | sort | while read -r target_dir; do
         # Get human readable size
         size=$(du -h "$artifact_path" | awk '{print $1}')
         
-        printf "% -60s % -50s %s\n" "$project_name" "$artifact_name" "$size"
+        printf "%-60s %-50s %s\n" "$project_name" "$artifact_name" "$size"
     done
 done

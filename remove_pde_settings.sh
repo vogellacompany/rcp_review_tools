@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # This script recursively removes specific Eclipse PDE preference files
 # (org.eclipse.pde.core.prefs and org.eclipse.pde.prefs)
