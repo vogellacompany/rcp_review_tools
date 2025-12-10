@@ -28,8 +28,6 @@ find . -type d -name ".settings" -print0 | while IFS= read -r -d $'\0' settings_
             else
                 echo "Error removing $file_name from ${settings_dir}."
             fi
-        else
-            echo "File not found: $file_path"
         fi
     done
 done
