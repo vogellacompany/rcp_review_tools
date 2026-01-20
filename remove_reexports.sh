@@ -2,18 +2,22 @@
 
 # Default values
 DRY_RUN=false
-REPORT_FILE="reexport_report.txt"
-TEMP_DATA_FILE="reexport_data.tmp"
+TEMP_DATA_FILE=$(mktemp)
+trap 'rm -f "$TEMP_DATA_FILE"' EXIT
 
 # Check arguments
-for arg in "$@"; do
-    if [[ "$arg" == "--dry-run" ]]; then
-        DRY_RUN=true
-    fi
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        *)
+            echo "Error: Unknown argument '$1'" >&2
+            exit 1
+            ;;
+    esac
 done
-
-# Initialize report data
-> "$TEMP_DATA_FILE"
 
 echo "Searching for MANIFEST.MF files..."
 if [ "$DRY_RUN" = true ]; then
@@ -21,7 +25,8 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 # Find all MANIFEST.MF files
-find . -type f -name "MANIFEST.MF" | while read -r manifest_file; do
+find . -type f -name "MANIFEST.MF" -print0 | while IFS= read -r -d '' manifest_file;
+    do
     # Extract Bundle-SymbolicName
     # We use perl to extract it reliably
     bsn=$(perl -ne 'print $1 if /^Bundle-SymbolicName:\s*([^; \s\r\n]+)/' "$manifest_file")
@@ -37,7 +42,7 @@ find . -type f -name "MANIFEST.MF" | while read -r manifest_file; do
         # This handles entries even with version ranges containing commas
         perl -ne 'BEGIN { $bsn = shift } 
             if (/;visibility:=reexport/) { 
-                while (/([^,;\s\n]+)(?:;(?:"[^"]*"|[^,"]*)*?)*;visibility:=reexport/g) { 
+                while (/([^,;\s\n]+)(?:;("[^"]*"|[^,"]*)*?)*;visibility:=reexport/g) { 
                     print "$1|$bsn\n"; 
                 } 
             }' "$bsn" "$manifest_file" >> "$TEMP_DATA_FILE"
@@ -80,6 +85,3 @@ if [ -s "$TEMP_DATA_FILE" ]; then
 else
     echo "No re-exports found."
 fi
-
-# Cleanup
-rm -f "$TEMP_DATA_FILE"

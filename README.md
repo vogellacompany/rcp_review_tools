@@ -118,34 +118,33 @@ Recursively searches all `MANIFEST.MF` files for the usage of a certain library 
     *   Parses multi-line `MANIFEST.MF` headers correctly.
     *   Searches both `Require-Bundle` and `Import-Package`.
     *   Highlights the matching entry in the output.
-        *   **Case-insensitive:** The search is case-insensitive.
-        *   Works on Linux and Windows.
-    
-    ### 11. Remove Re-exports (`remove_reexports.sh`)
-    
-    Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins and generates a report.
-    
-    *   **Purpose:** To eliminate re-exporting of bundles, promoting cleaner dependency management and reducing unnecessary classpath exposure.
-    *   **Usage:** `./remove_reexports.sh [--dry-run]`
-    *   **Key Features:**
-        *   Recursively scans for `MANIFEST.MF` files.
-        *   Correctly handles complex `Require-Bundle` entries, including version ranges with commas.
-        *   Generates a detailed report: "Re-exported plug-in" | "Exported by:".
-        *   **Dry Run:** Use `--dry-run` to generate the report without modifying files.
-        *   Works on Linux and Windows (Git Bash).
-    
-    ## Compatibility
-    
-    These scripts are written in Bash and are compatible with:
-    *   **Linux**
-    *   **Windows** (via Git Bash, WSL, or Cygwin)
-    *   **macOS** (Requires Bash 4.0+ for associative array support in some scripts)
-    
-    ## Requirements
-    
-    *   **Bash 4.0+**
-    *   **Python 3** (Required for `analyze_build_times.py`)
-    *   **Perl** (Required for `remove_reexports.sh` for robust manifest parsing)
-    *   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
-    *   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
-    
+    *   **Case-insensitive:** The search is case-insensitive.
+    *   Works on Linux and Windows.
+
+### 11. Remove Re-exports (`remove_reexports.sh`)
+
+Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins and generates a report.
+
+*   **Purpose:** To eliminate re-exporting of bundles, promoting cleaner dependency management and reducing unnecessary classpath exposure.
+*   **Usage:** `./remove_reexports.sh [--dry-run]`
+*   **Key Features:**
+    *   Recursively scans for `MANIFEST.MF` files.
+    *   Correctly handles complex `Require-Bundle` entries, including version ranges with commas.
+    *   Generates a detailed report: "Re-exported plug-in" | "Exported by:".
+    *   **Dry Run:** Use `--dry-run` to generate the report without modifying files.
+    *   Works on Linux and Windows (Git Bash).
+
+## Compatibility
+
+These scripts are written in Bash and are compatible with:
+*   **Linux**
+*   **Windows** (via Git Bash, WSL, or Cygwin)
+*   **macOS** (Requires Bash 4.0+ for associative array support in some scripts)
+
+## Requirements
+
+*   **Bash 4.0+**
+*   **Python 3** (Required for `analyze_build_times.py`)
+*   **Perl** (Required for `remove_reexports.sh` for robust manifest parsing)
+*   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
+*   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
