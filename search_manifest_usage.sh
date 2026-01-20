@@ -69,6 +69,9 @@ find "$SEARCH_DIR" -type f -iname "MANIFEST.MF" -print0 | while IFS= read -r -d 
             }
         }
 
+        # Strip CR for Windows file compatibility
+        { sub(/\r$/, "") }
+
         /^Require-Bundle:/ {
             if (in_header) { check_entries(current_header, current_value); }
             in_header = 1
