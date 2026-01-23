@@ -34,17 +34,31 @@ if [ "$DRY_RUN" = "true" ]; then
     echo "Running in DRY RUN mode. No files will be modified."
 fi
 
-find "$SEARCH_DIR" -name ".classpath" -type f -print0 | while IFS= read -r -d '' file; do
-    # Check if the file needs updating (search for the pattern)
-    if perl -0777 -ne 'exit 0 if /<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">\s*<attributes>\s*<attribute name="module" value="true"\/>\s*<\/attributes>\s*<\/classpathentry>/; exit 1' "$file"; then
-        if [ "$DRY_RUN" = "true" ]; then
-            echo "Would update: $file"
-        else
-            echo "Updating: $file"
-            # Use perl for multi-line replacement, capturing leading indentation
-            perl -i -0777 -pe 's/^([ \t]*)<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">\s*<attributes>\s*<attribute name="module" value="true"\/>\s*<\/attributes>\s*<\/classpathentry>/$1<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER\/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType\/JavaSE-17"\/>/gm' "$file"
-        fi
-    fi
-done
+export DRY_RUN
+find "$SEARCH_DIR" -name ".classpath" -type f -print0 | xargs -0 -P 4 perl -e '
+    use strict;
+    use warnings;
+    my $dry_run = ($ENV{DRY_RUN} eq "true");
+    local $/; # Slurp mode
+    foreach my $file (@ARGV) {
+        open my $fh, "<", $file or do { warn "Cannot open $file: $!"; next; };
+        my $content = <$fh>;
+        close $fh;
+        
+        # Regex matches both:
+        # 1. Complex entry with module="true" attribute
+        # 2. Simple self-closing entry <classpathentry ... />
+        if ($content =~ s/^([ \t]*)<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"(?:>\s*<attributes>\s*<attribute name="module" value="true"\/>\s*<\/attributes>\s*<\/classpathentry>|\s*\/>)/$1<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER\/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType\/JavaSE-17"\/>/gm) {
+            if ($dry_run) {
+                print "Would update: $file\n";
+            } else {
+                print "Updating: $file\n";
+                open my $out, ">", $file or do { warn "Cannot write $file: $!"; next; };
+                print $out $content;
+                close $out;
+            }
+        }
+    }
+'
 
 echo "Done."
