@@ -134,6 +134,17 @@ Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins an
     *   **Dry Run:** Use `--dry-run` to generate the report without modifying files.
     *   Works on Linux and Windows (Git Bash).
 
+### 12. Update JRE Container (`update_jre_container.sh`)
+
+Recursively finds `.classpath` files and replaces the JRE container entry that has module attributes with a standard JavaSE-17 entry.
+
+*   **Purpose:** To standardize the JRE container configuration across Eclipse projects, ensuring they all use `JavaSE-17`, and to remove specific module attributes that might cause issues or inconsistencies.
+*   **Usage:** `./update_jre_container.sh`
+*   **Key Features:**
+    *   **Recursive Search:** Finds all `.classpath` files in the current directory and subdirectories.
+    *   **Multi-line Replacement:** Correctly identifies and replaces JRE container entries even when split across multiple lines with indentation.
+    *   **Preserves Indentation:** Maintains the original file's indentation (tabs/spaces) for the replaced entry.
+
 ## Compatibility
 
 These scripts are written in Bash and are compatible with:
@@ -145,6 +156,6 @@ These scripts are written in Bash and are compatible with:
 
 *   **Bash 4.0+**
 *   **Python 3** (Required for `analyze_build_times.py`)
-*   **Perl** (Required for `remove_reexports.sh` for robust manifest parsing)
+*   **Perl** (Required for `remove_reexports.sh` and `update_jre_container.sh`)
 *   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
 *   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
