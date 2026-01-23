@@ -1,7 +1,8 @@
 #!/bin/bash
+set -euo pipefail
 
 # Default values
-DRY_RUN=false
+DRY_RUN="false"
 TEMP_DATA_FILE=$(mktemp)
 trap 'rm -f "$TEMP_DATA_FILE"' EXIT
 
@@ -9,7 +10,7 @@ trap 'rm -f "$TEMP_DATA_FILE"' EXIT
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run)
-            DRY_RUN=true
+            DRY_RUN="true"
             shift
             ;;
         *)
@@ -20,7 +21,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "Searching for MANIFEST.MF files..."
-if [ "$DRY_RUN" = true ]; then
+if [ "$DRY_RUN" = "true" ]; then
     echo "Running in DRY RUN mode. No files will be modified."
 fi
 
@@ -48,7 +49,7 @@ find . -type f -name "MANIFEST.MF" -print0 | while IFS= read -r -d '' manifest_f
             }' "$bsn" "$manifest_file" >> "$TEMP_DATA_FILE"
 
         # Perform removal if not dry run
-        if [ "$DRY_RUN" = false ]; then
+        if [ "$DRY_RUN" = "false" ]; then
             # Use perl for in-place replacement to be consistent and cross-platform
             perl -i -pe 's/;visibility:=reexport//g' "$manifest_file"
         fi
