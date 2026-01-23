@@ -4,7 +4,16 @@ set -euo pipefail
 # This script searches for .classpath files and replaces the JRE_CONTAINER entry 
 # that has module attributes with a standard JavaSE-17 entry.
 
-find . -name ".classpath" -type f -print0 | while IFS= read -r -d '' file; do
+SEARCH_DIR="${1:-.}"
+
+if [ ! -d "$SEARCH_DIR" ]; then
+    echo "Error: Directory '$SEARCH_DIR' does not exist." >&2
+    exit 1
+fi
+
+echo "Searching in: $SEARCH_DIR"
+
+find "$SEARCH_DIR" -name ".classpath" -type f -print0 | while IFS= read -r -d '' file; do
     echo "Processing $file..."
     
     # Use perl for multi-line replacement, capturing leading indentation

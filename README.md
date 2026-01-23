@@ -139,9 +139,10 @@ Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins an
 Recursively finds `.classpath` files and replaces the JRE container entry that has module attributes with a standard JavaSE-17 entry.
 
 *   **Purpose:** To standardize the JRE container configuration across Eclipse projects, ensuring they all use `JavaSE-17`, and to remove specific module attributes that might cause issues or inconsistencies.
-*   **Usage:** `./update_jre_container.sh`
+*   **Usage:** `./update_jre_container.sh [directory]`
 *   **Key Features:**
-    *   **Recursive Search:** Finds all `.classpath` files in the current directory and subdirectories.
+    *   **Configurable Search Path:** Allows specifying a root directory to scan (defaults to the current directory).
+    *   **Recursive Search:** Finds all `.classpath` files in the specified directory and subdirectories.
     *   **Multi-line Replacement:** Correctly identifies and replaces JRE container entries even when split across multiple lines with indentation.
     *   **Preserves Indentation:** Maintains the original file's indentation (tabs/spaces) for the replaced entry.
 
