@@ -1,6 +1,6 @@
 # JVM Performance Optimization Guide
 
-This guide provides the minimal configuration required to optimize an Java applciation for both HotSpot and OpenJ9.
+This guide provides the minimal configuration required to optimize a Java application for both HotSpot and OpenJ9.
 It is based on Java 25.
 
 ---
@@ -62,7 +62,7 @@ Look for this in the console or log:
 
 ### 2. Eclipse OpenJ9 (IBM / Semeru)
 
-Support fast startup via "Shared Classes" caching and has a small RAM footprint .
+Support fast startup via "Shared Classes" caching and has a small RAM footprint.
 *(Note: ZGC is a HotSpot-only feature. OpenJ9 achieves low-latency via different policies).*
 
 #### 🛠️ Configuration (Add to eclipse.ini)
