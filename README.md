@@ -147,6 +147,18 @@ Recursively finds `.classpath` files and replaces the JRE container entry that h
     *   **Multi-line Replacement:** Correctly identifies and replaces JRE container entries even when split across multiple lines with indentation.
     *   **Preserves Indentation:** Maintains the original file's indentation (tabs/spaces) for the replaced entry.
 
+### 13. Update Eclipse SWT (`update-eclipse-swt.sh`)
+
+Updates an Eclipse installation with locally built SWT jars and native libraries. Patches the `Bundle-Version` in the built jars to match the installed version so that OSGi resolution continues to work.
+
+*   **Purpose:** To quickly test local SWT changes in a full Eclipse installation.
+*   **Usage:** `./update-eclipse-swt.sh [ECLIPSE_DIR]`
+*   **Key Features:**
+    *   **Version Patching:** Automatically matches the `Bundle-Version` to the installed one.
+    *   **Automatic Backups:** Creates `.bak` files of original jars before replacement.
+    *   **Supports GTK/Linux:** Specifically targets `org.eclipse.swt` and `org.eclipse.swt.gtk.linux.x86_64`.
+    *   **Cleanup:** Provides instructions to restore original jars.
+
 ## Compatibility
 
 These scripts are written in Bash and are compatible with:
