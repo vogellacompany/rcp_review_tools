@@ -89,23 +89,28 @@ echo -e "${GREEN}Parsing dependency tree: $TREE_FILE${NC}"
 
 # 2. Extract bundles (and optionally features) from dependency:tree output ---
 # Lines look like:
-#   [INFO] +- p2.eclipse-plugin:org.eclipse.osgi:jar:3.19.0.v20231206-1845:system
-#   [INFO] |  \- p2.eclipse-feature:org.eclipse.rcp:eclipse-feature:4.34.0.v...:system
+#   [INFO] +- p2.eclipse.plugin:org.eclipse.osgi:eclipse-plugin:3.24.200.v...:system
+#   [INFO] +- org.eclipse.platform:org.eclipse.ui:eclipse-plugin:3.205.0-SNAPSHOT:compile
+#   [INFO] +- p2.eclipse.feature:org.eclipse.rcp:eclipse-feature:4.34.0.v...:system
 #
-# Field 2 is the symbolic name; the version is the next-to-last field (this
-# stays correct whether or not a classifier is present).
+# We key off the packaging field (eclipse-plugin / eclipse-feature) rather
+# than the groupId, so that reactor modules (scope=compile, SNAPSHOT) are
+# included alongside p2-resolved bundles (scope=system). Field 2 is the
+# bundle symbolic name; the version is the next-to-last field, which stays
+# correct whether or not a classifier is present.
 if [ "$INCLUDE_FEATURES" = true ]; then
-    PATTERN='p2\.eclipse-(plugin|feature):[^[:space:]]+:system'
+    PACKAGING_RE='eclipse-(plugin|feature)'
 else
-    PATTERN='p2\.eclipse-plugin:[^[:space:]]+:system'
+    PACKAGING_RE='eclipse-plugin'
 fi
+COORD_RE="[^:[:space:]]+:[^:[:space:]]+:${PACKAGING_RE}:[^:[:space:]]+(:[^:[:space:]]+)?:[a-z]+"
 
-grep -oE "$PATTERN" "$TREE_FILE" 2>/dev/null \
+grep -oE "$COORD_RE" "$TREE_FILE" 2>/dev/null \
     | awk -F':' 'NF >= 5 { print $2 "\t" $(NF-1) }' \
     | sort -u > "$UNITS"
 
 if [ ! -s "$UNITS" ]; then
-    echo -e "${RED}Error: No p2.eclipse-plugin entries found.${NC}"
+    echo -e "${RED}Error: No eclipse-plugin entries found in the dependency tree.${NC}"
     echo    "Make sure Maven ran 'dependency:tree' in a Tycho reactor."
     exit 1
 fi
