@@ -40,15 +40,15 @@ Extracts entries from a Target Platform file and searches for their usage direct
 
 ### 4. Target Platform Duplicates (`target-platform-duplicates.sh`)
 
-Identifies bundles that appear in the resolved Tycho target platform under more than one version. Uses the XML dump produced by Tycho when resolution runs with `-Dtycho.target-platform.dump=true`.
+Identifies bundles that appear in the resolved Tycho target platform under more than one version, by parsing the output of `mvn dependency:tree` in a Tycho reactor.
 
 *   **Purpose:** To detect version conflicts in the target platform (same symbolic name resolved to multiple versions), which typically cause hard-to-diagnose runtime issues.
-*   **Usage:** `./target-platform-duplicates.sh [options] [dump-file-or-directory]`
+*   **Usage:** `./target-platform-duplicates.sh [options] [dependency-tree-file]`
 *   **Key Features:**
-    *   With no arguments, runs `mvn -q dependency:tree -Dtycho.target-platform.dump=true` and scans every `*/target/target-platform-*.xml` produced in the reactor.
-    *   Accepts a directory (scanned recursively) or a single dump file as input.
-    *   Groups `<unit>` entries by symbolic name and reports any id with more than one distinct version.
-    *   `-f` / `--features` includes feature IUs (`*.feature.group`); by default only plug-ins are considered.
+    *   With no arguments, runs `mvn -B dependency:tree` and parses its output.
+    *   Alternatively accepts a captured log (`mvn -B dependency:tree | tee deptree.log`), so Maven can be run once and reused across invocations.
+    *   Extracts `p2.eclipse-plugin:<bsn>:...:<version>:system` lines (and `p2.eclipse-feature:...` with `-f`), groups them by symbolic name, and reports any id resolved to more than one version.
+    *   `-f` / `--features` includes feature IUs; by default only plug-ins are considered.
     *   `-a` / `--all` additionally prints the full symbolic-name inventory.
     *   Works on Linux and Windows (Git Bash, WSL, Cygwin).
 

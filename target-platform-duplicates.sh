@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Identify duplicated bundles in a Tycho target platform.
 #
-# Uses the target-platform dump written by Tycho when resolution runs with
-# '-Dtycho.target-platform.dump=true'. The dump lists every resolved IU as
-# '<unit id="..." version="..."/>'. This script collects those entries across
-# the reactor, groups them by symbolic name, and reports any id that resolves
-# to more than one version (a "duplicate" / version conflict).
+# Parses the output of 'mvn dependency:tree' in a Tycho reactor. Tycho prints
+# every resolved target-platform bundle as
+#     p2.eclipse-plugin:<symbolic-name>:<packaging>:<version>:system
+# (features use 'p2.eclipse-feature'). This script groups those lines by
+# symbolic name and reports any id that appears with more than one version.
 #
 # Works on Linux, macOS, and Windows (Git Bash, WSL, Cygwin).
 
@@ -19,27 +19,29 @@ NC='\033[0m'
 
 usage() {
     cat <<EOF
-Usage: $0 [options] [dump-file-or-directory]
+Usage: $0 [options] [dependency-tree-file]
 
 Reports bundles that appear in the resolved Tycho target platform under more
-than one version. The data source is the XML produced by Tycho when it
-resolves with '-Dtycho.target-platform.dump=true' (one file per module under
-'<module>/target/target-platform-*.xml').
+than one version. Input is the textual output of 'mvn dependency:tree' run
+in a Tycho reactor.
 
-If no path is given, the script runs
-    mvn -q dependency:tree -Dtycho.target-platform.dump=true
-in the current directory and scans the dump files it produced.
+If no file is given, the script runs
+    mvn -B dependency:tree
+in the current directory, captures its output, and parses it.
 
 Options:
-  -f, --features    Include feature IUs (*.feature.group) in the report.
+  -f, --features    Include feature IUs (p2.eclipse-feature:*) in the report.
                     By default only plug-ins/bundles are considered.
   -a, --all         Also print the full inventory of every symbolic name.
   -h, --help        Show this help.
 
 Examples:
   $0
-  $0 /path/to/my.rcp.parent
-  $0 some.module/target/target-platform-some.module.xml
+  $0 deptree.log
+
+Tip: to run Maven yourself and reuse the output, do:
+    mvn -B dependency:tree | tee deptree.log
+    $0 deptree.log
 EOF
     exit 1
 }
@@ -61,62 +63,51 @@ done
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-DUMP_LIST="$TEMP_DIR/dump-files.txt"
 UNITS="$TEMP_DIR/units.tsv"
 REPORT="$TEMP_DIR/report.tsv"
+TREE_FILE=""
 
-# 1. Locate dump files ---------------------------------------------------------
+# 1. Obtain dependency:tree output --------------------------------------------
 if [ -z "$INPUT" ]; then
     if ! command -v mvn >/dev/null 2>&1; then
         echo -e "${RED}Error: Maven (mvn) not found in PATH.${NC}"
         exit 1
     fi
-    echo -e "${BLUE}Running: mvn -q dependency:tree -Dtycho.target-platform.dump=true${NC}"
-    if ! mvn -q dependency:tree -Dtycho.target-platform.dump=true; then
-        echo -e "${YELLOW}Maven exited non-zero; continuing if dump files were produced.${NC}"
+    TREE_FILE="$TEMP_DIR/deptree.log"
+    echo -e "${BLUE}Running: mvn -B dependency:tree${NC}"
+    if ! mvn -B dependency:tree > "$TREE_FILE" 2>&1; then
+        echo -e "${YELLOW}Maven exited non-zero; continuing with captured output.${NC}"
     fi
-    find . -type f -path '*/target/target-platform-*.xml' > "$DUMP_LIST"
-elif [ -d "$INPUT" ]; then
-    find "$INPUT" -type f -path '*/target/target-platform-*.xml' > "$DUMP_LIST"
 elif [ -f "$INPUT" ]; then
-    echo "$INPUT" > "$DUMP_LIST"
+    TREE_FILE="$INPUT"
 else
-    echo -e "${RED}Error: '$INPUT' is neither a file nor a directory.${NC}"
+    echo -e "${RED}Error: '$INPUT' is not a regular file.${NC}"
     exit 1
 fi
 
-if [ ! -s "$DUMP_LIST" ]; then
-    echo -e "${RED}Error: No target-platform dump files found.${NC}"
-    echo    "Make sure Tycho ran with -Dtycho.target-platform.dump=true."
-    exit 1
+echo -e "${GREEN}Parsing dependency tree: $TREE_FILE${NC}"
+
+# 2. Extract bundles (and optionally features) from dependency:tree output ---
+# Lines look like:
+#   [INFO] +- p2.eclipse-plugin:org.eclipse.osgi:jar:3.19.0.v20231206-1845:system
+#   [INFO] |  \- p2.eclipse-feature:org.eclipse.rcp:eclipse-feature:4.34.0.v...:system
+#
+# Field 2 is the symbolic name; the version is the next-to-last field (this
+# stays correct whether or not a classifier is present).
+if [ "$INCLUDE_FEATURES" = true ]; then
+    PATTERN='p2\.eclipse-(plugin|feature):[^[:space:]]+:system'
+else
+    PATTERN='p2\.eclipse-plugin:[^[:space:]]+:system'
 fi
 
-dump_count=$(wc -l < "$DUMP_LIST" | tr -d ' ')
-echo -e "${GREEN}Scanning $dump_count dump file(s)${NC}"
-
-# 2. Extract <unit id="..." version="..."/> entries ----------------------------
-: > "$UNITS"
-while IFS= read -r f; do
-    # id before version
-    grep -oE '<unit[^/]*id="[^"]+"[^/]*version="[^"]+"' "$f" 2>/dev/null | \
-        sed -E 's/.*id="([^"]+)".*version="([^"]+)".*/\1\t\2/' >> "$UNITS" || true
-    # version before id (same tag, different attribute order)
-    grep -oE '<unit[^/]*version="[^"]+"[^/]*id="[^"]+"' "$f" 2>/dev/null | \
-        sed -E 's/.*version="([^"]+)".*id="([^"]+)".*/\2\t\1/' >> "$UNITS" || true
-done < "$DUMP_LIST"
+grep -oE "$PATTERN" "$TREE_FILE" 2>/dev/null \
+    | awk -F':' 'NF >= 5 { print $2 "\t" $(NF-1) }' \
+    | sort -u > "$UNITS"
 
 if [ ! -s "$UNITS" ]; then
-    echo -e "${RED}Error: No <unit> entries extracted from dump files.${NC}"
+    echo -e "${RED}Error: No p2.eclipse-plugin entries found.${NC}"
+    echo    "Make sure Maven ran 'dependency:tree' in a Tycho reactor."
     exit 1
-fi
-
-# Same id+version appearing in several reactor dumps is not a duplicate.
-sort -u "$UNITS" -o "$UNITS"
-
-# Filter features unless explicitly included.
-if [ "$INCLUDE_FEATURES" != true ]; then
-    awk -F'\t' '$1 !~ /\.feature\.(group|jar)$/' "$UNITS" > "$UNITS.tmp"
-    mv "$UNITS.tmp" "$UNITS"
 fi
 
 total_units=$(wc -l < "$UNITS" | tr -d ' ')
