@@ -38,7 +38,21 @@ Extracts entries from a Target Platform file and searches for their usage direct
     *   Deep scan of `MANIFEST.MF` files (Require-Bundle, Import-Package).
     *   Reports target entries that appear to be unused by any local source code.
 
-### 4. Binary Artifact Scanner (`scan_for_binary_artifacts.sh`)
+### 4. Target Platform Duplicates (`target-platform-duplicates.sh`)
+
+Identifies bundles that appear in the resolved Tycho target platform under more than one version. Uses the XML dump produced by Tycho when resolution runs with `-Dtycho.target-platform.dump=true`.
+
+*   **Purpose:** To detect version conflicts in the target platform (same symbolic name resolved to multiple versions), which typically cause hard-to-diagnose runtime issues.
+*   **Usage:** `./target-platform-duplicates.sh [options] [dump-file-or-directory]`
+*   **Key Features:**
+    *   With no arguments, runs `mvn -q dependency:tree -Dtycho.target-platform.dump=true` and scans every `*/target/target-platform-*.xml` produced in the reactor.
+    *   Accepts a directory (scanned recursively) or a single dump file as input.
+    *   Groups `<unit>` entries by symbolic name and reports any id with more than one distinct version.
+    *   `-f` / `--features` includes feature IUs (`*.feature.group`); by default only plug-ins are considered.
+    *   `-a` / `--all` additionally prints the full symbolic-name inventory.
+    *   Works on Linux and Windows (Git Bash, WSL, Cygwin).
+
+### 5. Binary Artifact Scanner (`scan_for_binary_artifacts.sh`)
 
 Scans the codebase for binary artifacts such as images, documents, archives, and compiled binaries.
 
@@ -49,7 +63,7 @@ Scans the codebase for binary artifacts such as images, documents, archives, and
     *   Calculates counts and total size per category.
     *   Useful for repo cleanup and size optimization.
 
-### 5. Remove Features from Build (`remove-features-from-build.sh`)
+### 6. Remove Features from Build (`remove-features-from-build.sh`)
 
 Recursively finds `pom.xml` files and comments out modules ending in `.feature`.
 
@@ -60,7 +74,7 @@ Recursively finds `pom.xml` files and comments out modules ending in `.feature`.
     *   **Apply Mode:** Use `--apply` to actually modify the `pom.xml` files.
     *   Comments out `<module>...feature</module>` lines.
 
-### 6. Analyze Build Times (`analyze_build_times.py`)
+### 7. Analyze Build Times (`analyze_build_times.py`)
 
 Analyzes build times from a build output file.
 
@@ -70,7 +84,7 @@ Analyzes build times from a build output file.
     *   Parses various time formats (e.g., "5.990 s", "01:50 min", "1.5 min").
     *   Takes a build output file as input.
 
-### 7. Eclipse Project Analyzer (`eclipse-project-analyser.sh`)
+### 8. Eclipse Project Analyzer (`eclipse-project-analyser.sh`)
 
 Recursively analyzes Eclipse RCP projects (plugins, features, products) within a given workspace path and generates a Markdown report.
 
@@ -84,7 +98,7 @@ Recursively analyzes Eclipse RCP projects (plugins, features, products) within a
     *   Generates a detailed Markdown report with summaries, project lists, statistics, and a directory structure.
     *   Ignores common build/version control directories (`.git`, `target`, `bin`, etc.).
 
-### 8. Java Class Counter (`java-class-counter.sh`)
+### 9. Java Class Counter (`java-class-counter.sh`)
 
 Counts lines of Java code, separating production code from test code, and provides statistics per project and overall.
 
@@ -96,7 +110,7 @@ Counts lines of Java code, separating production code from test code, and provid
     *   Provides statistics for each detected project.
     *   Calculates a "Test-Code-Ratio" (Test-Lines / Prod-Lines).
 
-### 9. Scan JARs (`scan_jars.sh`)
+### 10. Scan JARs (`scan_jars.sh`)
 
 Scans for `.jar` files within `lib` or `libs` directories and generates a Markdown report.
 
@@ -108,7 +122,7 @@ Scans for `.jar` files within `lib` or `libs` directories and generates a Markdo
     *   Lists JAR files found within each identified plugin's `lib`/`libs` directory.
     *   Provides a global summary of unique JARs and their occurrence count.
 
-### 10. Search Manifest Usage (`search_manifest_usage.sh`)
+### 11. Search Manifest Usage (`search_manifest_usage.sh`)
 
 Recursively searches all `MANIFEST.MF` files for the usage of a certain library (e.g., `riena`) in `Require-Bundle` and `Import-Package` headers.
 
@@ -121,7 +135,7 @@ Recursively searches all `MANIFEST.MF` files for the usage of a certain library 
     *   **Case-insensitive:** The search is case-insensitive.
     *   Works on Linux and Windows.
 
-### 11. Remove Re-exports (`remove_reexports.sh`)
+### 12. Remove Re-exports (`remove_reexports.sh`)
 
 Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins and generates a report.
 
@@ -134,7 +148,7 @@ Removes `;visibility:=reexport` from `MANIFEST.MF` files for Eclipse plug-ins an
     *   **Dry Run:** Use `--dry-run` to generate the report without modifying files.
     *   Works on Linux and Windows (Git Bash).
 
-### 12. Update JRE Container (`update_jre_container.sh`)
+### 13. Update JRE Container (`update_jre_container.sh`)
 
 Recursively finds `.classpath` files and replaces the JRE container entry that has module attributes with a standard JavaSE-17 entry.
 
