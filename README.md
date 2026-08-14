@@ -198,10 +198,36 @@ as the Eclipse Platform.
     *   Runs the whole of `eclipse.pde` in seconds; `--jobs` spreads the parse
         over worker processes and `--fail-on-findings` gates a CI job.
 
+### 15. Eclipse Startup Trace (`trace-startup/`)
+
+A sampling profiler for Eclipse startup and UI freezes, built on repeated JVM
+thread dumps. Linux and Windows versions with the same options and output.
+
+*   **Purpose:** To turn a vague "the IDE hangs on startup" into a named method,
+    by taking many thread dumps in a row instead of one. A call that appears in
+    twenty consecutive samples is the freeze; a call that appears once is noise.
+*   **Tools:**
+    *   `profile-eclipse-startup.sh` / `.ps1` - start Eclipse, sample a thread while
+        it comes up, write every dump to a file and print a summary.
+    *   `show-blocking-stack.sh` / `.ps1` - print the full stack of the samples
+        matching a regex.
+*   **Usage:** `trace-startup/profile-eclipse-startup.sh --eclipse /path/to/eclipse --data ~/workspace/platform`
+*   **Key Features:**
+    *   Prints a timeline, the most frequent triggering frame, the hottest leaf
+        frames, and an inclusive cost ranking; `--until` restricts all of them to
+        the startup window so the idle event loop does not dominate.
+    *   `--thread` matches on a prefix, so `--thread "Start Level"` reaches the
+        Equinox thread whose name carries a per run UUID. Needed because a long
+        stall can show up as a flat idle wait on `main`.
+    *   Linux samples via `kill -QUIT` rather than `jcmd`, avoiding a JVM start per
+        sample and allowing a 50 ms interval; both methods produce the same format.
+    *   `--pid` attaches to an already running IDE, for freezes rather than startup.
+    *   Requires a JDK for `jcmd`; see `trace-startup/README.md` for the caveats.
+
 ## Compatibility
 
-Most scripts are written in Bash; `dead-code-detector/` is Python. They are
-compatible with:
+Most scripts are written in Bash. `trace-startup/` additionally ships PowerShell
+versions for Windows, and `dead-code-detector/` is Python. They are compatible with:
 *   **Linux**
 *   **Windows** (via Git Bash, WSL, or Cygwin)
 *   **macOS** (Requires Bash 4.0+ for associative array support in some scripts)
@@ -213,3 +239,5 @@ compatible with:
 *   **Perl** (Required for `remove_reexports.sh` and `update_jre_container.sh`)
 *   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
 *   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
+*   **A JDK** for `jcmd` (Required for `trace-startup/`)
+*   **PowerShell 5.1+** (Required only for the Windows scripts in `trace-startup/`)
