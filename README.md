@@ -173,9 +173,35 @@ Updates an Eclipse installation with locally built SWT jars and native libraries
     *   **Supports GTK/Linux:** Specifically targets `org.eclipse.swt` and `org.eclipse.swt.gtk.linux.x86_64`.
     *   **Cleanup:** Provides instructions to restore original jars.
 
+### 14. Dead Code Detector (`dead-code-detector/`)
+
+A set of Python heuristics to find dead code in large Java source trees such
+as the Eclipse Platform.
+
+*   **Purpose:** To surface classes, public/protected constants, unused
+    imports, and dead private members that can be cleaned up, especially in
+    `internal` packages.
+*   **Tools:**
+    *   `find_dead_classes.py` - classes never referenced outside their own definition.
+    *   `find_dead_constants.py` - `public/protected static final` constants never used.
+    *   `find_unused_imports.py` - unused imports, with a `--fix` mode.
+    *   `find_dead_private.py` - private methods never called and private fields never read.
+*   **Usage:** `python3 dead-code-detector/find_dead_classes.py <root> [extra_roots ...]` or `dead-code-detector/run_all.sh <root>`.
+*   **Key Features:**
+    *   Resolves references through imports and package names, so classes
+        sharing a simple name (e.g. `Activator`, `Messages`) are not confused.
+    *   Extra roots can be given so usage from other repositories is counted.
+    *   `--internal-only` filters to packages containing `internal`;
+        `--skip-tests` ignores test classes that JUnit runs by name pattern.
+    *   Results are candidates for review, tagged `HIGH` (conclusive) or
+        `VERIFY` (name collision, manual check needed), and carry the line number.
+    *   Runs the whole of `eclipse.pde` in seconds; `--jobs` spreads the parse
+        over worker processes and `--fail-on-findings` gates a CI job.
+
 ## Compatibility
 
-These scripts are written in Bash and are compatible with:
+Most scripts are written in Bash; `dead-code-detector/` is Python. They are
+compatible with:
 *   **Linux**
 *   **Windows** (via Git Bash, WSL, or Cygwin)
 *   **macOS** (Requires Bash 4.0+ for associative array support in some scripts)
@@ -183,7 +209,7 @@ These scripts are written in Bash and are compatible with:
 ## Requirements
 
 *   **Bash 4.0+**
-*   **Python 3** (Required for `analyze_build_times.py`)
+*   **Python 3** (Required for `analyze_build_times.py` and `dead-code-detector/`)
 *   **Perl** (Required for `remove_reexports.sh` and `update_jre_container.sh`)
 *   Standard GNU tools: `awk`, `sed`, `grep`, `find`, `sort`
 *   **Maven (`mvn`)** (Required only for `target-platform-analysis.sh` if generating tree automatically)
