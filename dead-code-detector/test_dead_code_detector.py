@@ -90,6 +90,39 @@ class TestJavaAnalysis(unittest.TestCase):
         names = [c['name'] for c in consts]
         self.assertEqual(sorted(names), ['A', 'ARR', 'B', 'C', 'D'])
 
+    def test_static_final_class_is_not_a_constant(self):
+        code = '''
+        package com.example;
+        public class Outer {
+            public static final int REAL = 1;
+            public final static class Inner implements Runnable, Comparable<Inner> {
+                public void run() { int x = 1; }
+                public int compareTo(Inner o) { return 0; }
+            }
+            public static final class Plain { }
+        }
+        '''
+        clean = ja.strip_comments_protect_strings(code)
+        classes = ja.collect_classes(clean, "com.example")
+        consts = ja.collect_constants(clean, "com.example", classes)
+        self.assertEqual([c['name'] for c in consts], ['REAL'])
+
+    def test_nested_class_reference_keeps_outer_alive(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = os.path.join(d, 'src', 'com', 'example')
+            os.makedirs(pkg)
+            with open(os.path.join(pkg, 'Outer.java'), 'w') as f:
+                f.write('package com.example;\nclass Outer {\n'
+                        '    static class Inner { }\n}\n')
+            with open(os.path.join(pkg, 'User.java'), 'w') as f:
+                f.write('package com.example;\n'
+                        'import com.example.Outer.Inner;\n'
+                        'class User {\n    Inner i = new Inner();\n}\n')
+            index = ja.ClassIndex([d], [], jobs=1)
+            refs = index.count_refs(os.path.join(pkg, 'User.java'))
+            self.assertGreater(refs['com.example.Outer.Inner'], 0)
+            self.assertGreater(refs['com.example.Outer'], 0)
+
     def test_implicit_interface_constants(self):
         code = '''
         package com.example;
