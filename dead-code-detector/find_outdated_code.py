@@ -172,8 +172,13 @@ def analyze_file(filepath, rules=None):
 def _analyze_manifest(content, rules):
     if rules and 'old-bree' not in rules:
         return []
-    m = re.search(r'^Bundle-RequiredExecutionEnvironment:\s*JavaSE-(\d+)', content, re.MULTILINE)
-    if not m or int(m.group(1)) >= MIN_BREE:
+    m = re.search(r'^Bundle-RequiredExecutionEnvironment:\s*JavaSE-(\d+(?:\.\d+)?)', content, re.MULTILINE)
+    if not m:
+        return []
+    # JavaSE-1.8 is Java 8
+    version = m.group(1)
+    major = int(version.split('.')[1]) if version.startswith('1.') else int(version.split('.')[0])
+    if major >= MIN_BREE:
         return []
     line = content[:m.start()].count('\n') + 1
     return [(line, 'old-bree', 'OUTDATED', 'HIGH',

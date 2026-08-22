@@ -622,6 +622,10 @@ class OutdatedCodeTests(unittest.TestCase):
             hits = oc.analyze_file(path)
             self.assertEqual([h[1] for h in hits], ['old-bree'])
             with open(path, 'w') as f:
+                f.write('Bundle-RequiredExecutionEnvironment: JavaSE-1.8\n')
+            self.assertEqual([h[5] for h in oc.analyze_file(path)],
+                             ['Bundle-RequiredExecutionEnvironment: JavaSE-1.8'])
+            with open(path, 'w') as f:
                 f.write('Bundle-RequiredExecutionEnvironment: JavaSE-21\n')
             self.assertEqual(oc.analyze_file(path), [])
 
