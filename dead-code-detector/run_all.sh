@@ -2,14 +2,14 @@
 set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-ALL_SCRIPTS=(find_dead_classes.py find_dead_constants.py find_unused_imports.py find_dead_private.py)
+ALL_SCRIPTS=(find_dead_classes.py find_dead_constants.py find_unused_imports.py find_dead_private.py find_outdated_code.py)
 
 usage() {
     cat >&2 <<EOF
 Usage: $0 <root> [extra_roots ...] [--only NAME[,NAME...]] [detector options]
 
   --only NAME    run only the named detectors (classes, constants, imports,
-                 private); repeatable and comma separated.
+                 private, outdated); repeatable and comma separated.
 
 All other options are passed through to each detector, for example
 --internal-only, --skip-tests, --ignore-test-refs, --exclude, --jobs,
@@ -58,18 +58,22 @@ else
             constants) SCRIPTS+=(find_dead_constants.py) ;;
             imports)   SCRIPTS+=(find_unused_imports.py) ;;
             private)   SCRIPTS+=(find_dead_private.py) ;;
+            outdated)  SCRIPTS+=(find_outdated_code.py) ;;
             *) echo "Unknown detector: $name" >&2; usage ;;
         esac
     done
 fi
 
-# --fix only applies to the import detector; passing it to the others is a
-# hard argparse error, so drop it for them.
+# Some options only exist on one detector; passing them to the others is a
+# hard argparse error, so drop them there.
 STATUS=0
 for script in "${SCRIPTS[@]}"; do
     declare -a ARGS=()
     for opt in ${PASSTHROUGH[@]+"${PASSTHROUGH[@]}"}; do
         if [ "$opt" = "--fix" ] && [ "$script" != "find_unused_imports.py" ]; then
+            continue
+        fi
+        if [ "$opt" = "--ignore-test-refs" ] && [ "$script" = "find_outdated_code.py" ]; then
             continue
         fi
         ARGS+=("$opt")
