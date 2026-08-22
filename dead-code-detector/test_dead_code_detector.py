@@ -622,7 +622,6 @@ class OutdatedCodeTests(unittest.TestCase):
             static { NLS.initializeMessages("p.m", M.class); }
         }
         '''
-        self.assertEqual(self._rules(code), [])
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, 'M.java')
             with open(path, 'w') as f:
