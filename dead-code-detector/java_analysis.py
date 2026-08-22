@@ -39,6 +39,8 @@ CONST_MOD_RE = re.compile(
     r')\s+'
 )
 
+_TYPE_KEYWORD_RE = re.compile(r'(?:class|@?interface|enum|record)\b')
+
 # Matched against one already isolated statement (see top_level_statements),
 # never against a whole interface body: the lazy quantifier spans whitespace,
 # so on a large body it degenerated into a quadratic backtrack.
@@ -514,6 +516,9 @@ def collect_constants(clean, pkg, classes, masked=None):
     # 1. Explicit public/protected static final in any class/interface
     for m in CONST_MOD_RE.finditer(masked):
         start = m.end()
+        # "public static final class Foo implements Bar" is a type, not a field
+        if _TYPE_KEYWORD_RE.match(masked, start):
+            continue
         i = _statement_end(masked, start)
         if i >= len(masked):
             continue
@@ -846,11 +851,22 @@ class ClassIndex:
             resolved = self.resolve_token(m.group(1), scope)
             if resolved:
                 for f in resolved:
-                    refs[f] += 1
+                    self._credit(refs, f)
         for m in CHAIN_RE.finditer(content):
             for f in self.resolve_chain(m.group(0), scope):
-                refs[f] += 1
+                self._credit(refs, f)
         return refs
+
+    def _credit(self, refs, fqn):
+        """Count a reference to fqn and to every class enclosing it."""
+        while True:
+            refs[fqn] += 1
+            c = self.class_by_fqn.get(fqn)
+            if c is None or c['top_level']:
+                return
+            fqn = fqn.rsplit('.', 1)[0]
+            if fqn not in self.class_by_fqn:
+                return
 
 
 def count_non_java_classes(index, roots, exclusions):
