@@ -72,7 +72,8 @@ RULES = [
     ('line-separator-property', 'OUTDATED', 'HIGH',
      r'System\.getProperty\(\s*"line\.separator"\s*\)',
      'Use System.lineSeparator()'),
-    ('class-newinstance', 'OUTDATED', 'HIGH',
+    ('class-newinstance', 'OUTDATED', 'VERIFY',
+     r'(?:Class\.forName\([^;]*?\)|\.loadClass\([^;]*?\)|\b\w*(?:[cC]lass|clazz|cls|[tT]ype)\w*)'
      r'\.newInstance\(\s*\)',
      'Class.newInstance() is deprecated; use getDeclaredConstructor().newInstance()'),
     ('finalize', 'OUTDATED', 'HIGH',
@@ -161,12 +162,22 @@ def analyze_file(filepath, rules=None):
     clean = ja.strip_comments_protect_strings(content)
     masked = ja.mask_strings(clean)
     lines = clean.splitlines()
+    interfaces = [c for c in ja.collect_classes(clean, ja.extract_package(clean), masked)
+                  if c.get('kind') in ('interface', '@interface')]
+    nls = 'NLS.initializeMessages' in masked
     rows = []
     for rid, cat, conf, off, msg in scan_text(masked, rules):
+        if rid == 'mutable-static' and (nls or _inside(interfaces, off)):
+            continue
         line = ja.line_of(masked, off)
         snippet = lines[line - 1].strip() if 0 < line <= len(lines) else ''
         rows.append((line, rid, cat, conf, msg, snippet[:120]))
     return rows
+
+
+def _inside(classes, offset):
+    """Whether offset lies in the body of one of the classes."""
+    return any(c['body_start'] <= offset < c['body_end'] for c in classes)
 
 
 def _analyze_manifest(content, rules):

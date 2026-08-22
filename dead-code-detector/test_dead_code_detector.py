@@ -613,6 +613,28 @@ class OutdatedCodeTests(unittest.TestCase):
         '''
         self.assertEqual(self._rules(code), [])
 
+    def test_mutable_static_skips_nls_and_interface_fields(self):
+        code = '''
+        package p;
+        interface I { public static int X = 1; }
+        class M {
+            public static String Key_1;
+            static { NLS.initializeMessages("p.m", M.class); }
+        }
+        '''
+        self.assertEqual(self._rules(code), [])
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'M.java')
+            with open(path, 'w') as f:
+                f.write(code)
+            self.assertEqual(oc.analyze_file(path), [])
+
+    def test_class_newinstance_ignores_factories(self):
+        self.assertEqual(self._rules('Object o = DocumentBuilderFactory.newInstance();'), [])
+        self.assertEqual(self._rules('Object o = cls.getConstructor().newInstance();'), [])
+        self.assertEqual(self._rules('Object o = Class.forName(n).newInstance();'), ['class-newinstance'])
+        self.assertEqual(self._rules('Object o = clazz.newInstance();'), ['class-newinstance'])
+
     def test_old_bree_in_manifest(self):
         with tempfile.TemporaryDirectory() as d:
             os.makedirs(os.path.join(d, 'META-INF'))
