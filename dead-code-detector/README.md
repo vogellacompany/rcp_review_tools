@@ -18,8 +18,9 @@ repositories can still reference the symbol.
 | `find_dead_constants.py` | Public/protected `static final` constants never used |
 | `find_unused_imports.py` | Unused imports (with optional `--fix`) |
 | `find_dead_private.py` | Private methods never called and private fields never read |
+| `find_outdated_code.py` | Outdated idioms, suspicious error handling and likely slow code (rule based) |
 
-`run_all.sh <root>` runs all four in sequence.
+`run_all.sh <root>` runs all five in sequence.
 
 ## Usage
 
@@ -28,6 +29,7 @@ python3 find_dead_classes.py <root> [extra_roots ...] [options]
 python3 find_dead_constants.py <root> [extra_roots ...] [options]
 python3 find_unused_imports.py <root> [--fix] [options]
 python3 find_dead_private.py <root> [options]
+python3 find_outdated_code.py <root> [options]
 ./run_all.sh <root> [extra_roots ...] [--only NAME[,NAME...]] [options]
 ```
 
@@ -55,8 +57,11 @@ python3 find_dead_private.py <root> [options]
   as `JAVADOC_ONLY`, matching Eclipse's default behaviour of keeping them.
 * `find_unused_imports.py --fix`: Removes the unused import statements directly
   from the files while cleaning up blank lines in import blocks.
-* `run_all.sh --only classes,constants,imports,private`: Runs a subset of the
-  detectors. The script exits non-zero if any detector did.
+* `run_all.sh --only classes,constants,imports,private,outdated`: Runs a subset
+  of the detectors. The script exits non-zero if any detector did.
+* `find_outdated_code.py --list-rules`: Prints the rule table.
+  `--rules ID[,ID...]` runs a subset, `--category OUTDATED|BAD|SLOW` filters by
+  category, `--min-confidence high` drops the `VERIFY` rules.
 
 ## Output
 
@@ -68,6 +73,7 @@ DEAD_CONSTANT\tfile\tname\tINTERNAL|EXTERNAL_API\tHIGH|VERIFY\tCODE|TEST\tUNUSED
 UNUSED_IMPORT\tfile\tline\timport\tCLASS|STATIC\tINTERNAL|EXTERNAL_API\treason
 DEAD_PRIVATE_METHOD\tfile\tline\tname\tINTERNAL|EXTERNAL_API
 DEAD_PRIVATE_FIELD\tfile\tline\tname\tINTERNAL|EXTERNAL_API
+OUTDATED_CODE\tfile\tline\trule\tOUTDATED|BAD|SLOW\tHIGH|VERIFY\tINTERNAL|EXTERNAL_API\tCODE|TEST\tmessage\tsnippet
 ```
 
 * `HIGH`: The simple name is unique in the scanned tree and the analysis is conclusive.

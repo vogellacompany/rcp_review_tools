@@ -224,6 +224,15 @@ thread dumps. Linux and Windows versions with the same options and output.
     *   `--pid` attaches to an already running IDE, for freezes rather than startup.
     *   Requires a JDK for `jcmd`; see `trace-startup/README.md` for the caveats.
 
+## AI skills
+
+Agent skills for this repository live under `.claude/skills/`.
+They are loaded automatically by Claude Code when a task matches their description.
+
+*   **`tycho-builds`** documents how to build, compile and test any Maven Tycho project (Eclipse plug-ins, OSGi bundles, features, RCP products) from the command line.
+    It explains the reactor versus target platform model that decides whether a build tests your working tree or a published jar, the `tycho-p2-plugin` baseline replacement that silently swaps a compiled jar for the released one, how to compose the `-pl` module list, the Tycho Surefire properties for running a single test class, the headless Xvfb invocation for SWT and workbench tests, and how to verify from the build log what actually ran.
+    The Eclipse platform repositories appear as worked examples.
+
 ## Compatibility
 
 Most scripts are written in Bash. `trace-startup/` additionally ships PowerShell

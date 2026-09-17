@@ -10,6 +10,7 @@ import time
 import unittest
 
 import java_analysis as ja
+import find_outdated_code as oc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -567,6 +568,87 @@ public class StreamFilterTest {
         self.assertEqual(res_dead.returncode, 0, res_dead.stderr)
         self.assertIn("StreamFilter\t", res_dead.stdout)
         self.assertIn("TEST_ONLY", res_dead.stdout)
+
+
+class OutdatedCodeTests(unittest.TestCase):
+
+    def _rules(self, code):
+        clean = ja.strip_comments_protect_strings(code)
+        return sorted({h[0] for h in oc.scan_text(ja.mask_strings(clean))})
+
+    def test_rules_match_idioms(self):
+        code = '''
+        class A {
+            public static int COUNT = 0;
+            void run(List<String> list, Display display) {
+                Integer i = new Integer(1);
+                Map<String, String> m = new HashMap<String, String>();
+                display.syncExec(new Runnable() { public void run() { } });
+                for (int j = 0; j < list.size(); j++) { }
+                if (list.size() == 0) { }
+                try { } catch (IOException e) { }
+                Font f = new Font(display, null);
+            }
+        }
+        '''
+        self.assertEqual(self._rules(code), [
+            'anonymous-lambda-candidate', 'boxed-constructor', 'empty-catch',
+            'explicit-generic-args', 'index-loop-over-list', 'mutable-static',
+            'size-equals-zero', 'swt-resource-creation', 'sync-exec'])
+
+    def test_rules_ignore_comments_strings_and_modern_code(self):
+        code = '''
+        class A {
+            // new Integer(1) in a comment
+            String s = "new Vector() and catch (Exception e) { }";
+            private static final Pattern P = Pattern.compile("x");
+            public static final int MAX = 1;
+            void run(List<String> list) {
+                Map<String, String> m = new HashMap<>();
+                for (String x : list) { }
+                if (list.isEmpty()) { }
+                try { } catch (IOException e) { log(e); }
+            }
+        }
+        '''
+        self.assertEqual(self._rules(code), [])
+
+    def test_mutable_static_skips_nls_and_interface_fields(self):
+        code = '''
+        package p;
+        interface I { public static int X = 1; }
+        class M {
+            public static String Key_1;
+            static { NLS.initializeMessages("p.m", M.class); }
+        }
+        '''
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'M.java')
+            with open(path, 'w') as f:
+                f.write(code)
+            self.assertEqual(oc.analyze_file(path), [])
+
+    def test_class_newinstance_ignores_factories(self):
+        self.assertEqual(self._rules('Object o = DocumentBuilderFactory.newInstance();'), [])
+        self.assertEqual(self._rules('Object o = cls.getConstructor().newInstance();'), [])
+        self.assertEqual(self._rules('Object o = Class.forName(n).newInstance();'), ['class-newinstance'])
+        self.assertEqual(self._rules('Object o = clazz.newInstance();'), ['class-newinstance'])
+
+    def test_old_bree_in_manifest(self):
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, 'META-INF'))
+            path = os.path.join(d, 'META-INF', 'MANIFEST.MF')
+            with open(path, 'w') as f:
+                f.write('Bundle-SymbolicName: a\nBundle-RequiredExecutionEnvironment: JavaSE-11\n')
+            hits = oc.analyze_file(path)
+            self.assertEqual([h[1] for h in hits], ['old-bree'])
+            with open(path, 'w') as f:
+                f.write('Bundle-RequiredExecutionEnvironment: JavaSE-1.8\n')
+            self.assertEqual([h[5] for h in oc.analyze_file(path)],
+                             ['Bundle-RequiredExecutionEnvironment: JavaSE-1.8'])
+            with open(path, 'w') as f:
+                f.write('Bundle-RequiredExecutionEnvironment: JavaSE-21\n')
+            self.assertEqual(oc.analyze_file(path), [])
 
 
 if __name__ == '__main__':
