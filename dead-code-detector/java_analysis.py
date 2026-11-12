@@ -74,12 +74,29 @@ GENERIC_CONST_NAMES = frozenset({
 })
 
 NON_JAVA_EXTENSIONS = (
-    '.xml', '.mf', '.properties', '.txt', '.html', '.htm', '.json',
+    '.xml', '.e4xmi', '.exsd', '.mf', '.properties', '.txt', '.html', '.htm', '.json',
     '.product', '.target', '.launch', '.yml', '.yaml', '.ini', '.md',
     '.adoc', '.xsl', '.xslt', '.js', '.tld', '.css', '.c', '.h',
     '.gradle', '.prefs', '.options', '.preferences', '.tokens',
     '.csv', '.toml', '.jsp', '.exsd'
 )
+
+
+BUILD_OUTPUT_EXCLUDE = frozenset({'/target/', '/bin/'})
+
+SOURCE_DIR_RE = re.compile(r'/(?:src|src_[^/]+|source|java|resources)/')
+
+
+def active_exclusions(exclusions, norm_dir):
+    """Drop the build output exclusions below a source folder.
+
+    `target` and `bin` are ordinary Java package names, so
+    `.../src/org/eclipse/pde/internal/ui/shared/target/` must not be
+    mistaken for Maven output.
+    """
+    if not SOURCE_DIR_RE.search(norm_dir):
+        return exclusions
+    return [ex for ex in exclusions if ex not in BUILD_OUTPUT_EXCLUDE]
 
 
 def walk_files(roots, exclusions=DEFAULT_EXCLUDE, extensions=('.java',)):
@@ -93,12 +110,14 @@ def walk_files(roots, exclusions=DEFAULT_EXCLUDE, extensions=('.java',)):
             continue
         for dirpath, dirnames, filenames in os.walk(root):
             norm_dir = dirpath.replace(os.sep, '/') + '/'
-            if any(ex in norm_dir or ex.strip('/') in norm_dir.split('/') for ex in exclusions):
+            active = active_exclusions(exclusions, norm_dir)
+            if any(ex in norm_dir or ex.strip('/') in norm_dir.split('/') for ex in active):
                 dirnames[:] = []
                 continue
             dirnames[:] = [
                 d for d in dirnames
-                if not any(ex in (norm_dir + d + '/') for ex in exclusions)
+                if not any(ex in (norm_dir + d + '/')
+                           for ex in active_exclusions(exclusions, norm_dir + d + '/'))
             ]
             for fname in filenames:
                 if fname.endswith(extensions):
